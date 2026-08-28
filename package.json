@@ -1,0 +1,14 @@
+{
+  "name": "clinicflow-hospital-management",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "predev": "kill-port 3000 5000",
+    "dev": "concurrently --kill-others-on-fail \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "kill-port": "^2.0.1"
+  }
+}

@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
       : tables;
 
     for (const table of candidateTables) {
-      const user = db.prepare(`SELECT * FROM ${table.name} WHERE email = ?`).get(emailValue);
+      const user = await db.prepare(`SELECT * FROM ${table.name} WHERE email = ?`).get(emailValue);
       if (!user) continue;
       if (!(await bcrypt.compare(password, user.password))) continue;
 

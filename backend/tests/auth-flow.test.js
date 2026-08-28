@@ -1,5 +1,6 @@
 const { test, before } = require('node:test');
 const assert = require('node:assert/strict');
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const db = require('../database');
 const signupRoute = require('../routes/signup');
@@ -42,7 +43,7 @@ test('signup creates a patient account when no role is provided', async () => {
 
   await postHandler(signupRoute)(req, res);
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
   assert.equal(res.statusCode, 201);
   assert.ok(user);
   assert.equal(user.role, 'patient');
@@ -52,7 +53,7 @@ test('login accepts a patient account even when role is omitted', async () => {
   const email = `login-${Date.now()}@example.com`;
   const hash = await bcrypt.hash('secret123', 10);
 
-  db.prepare('INSERT INTO users (firstName, lastName, email, password, role) VALUES (?, ?, ?, ?, ?)')
+  await db.prepare('INSERT INTO users (firstName, lastName, email, password, role) VALUES (?, ?, ?, ?, ?)')
     .run('Login', 'User', email.toLowerCase(), hash, 'patient');
 
   const req = {

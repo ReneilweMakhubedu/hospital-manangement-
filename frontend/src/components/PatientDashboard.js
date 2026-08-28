@@ -26,7 +26,9 @@ function PatientDashboard() {
         const response = await fetch(`${API}/patient/my-appointments`, { headers: headers() });
         if (response.ok) {
           const data = await response.json();
-          setAppointments(data);
+          setAppointments(Array.isArray(data) ? data : []);
+        } else {
+          setAppointments([]);
         }
       } catch (error) {
         console.error('Error loading appointments:', error);

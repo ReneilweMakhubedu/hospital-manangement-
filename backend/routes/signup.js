@@ -14,14 +14,14 @@ router.post('/', async (req, res) => {
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
-    const result = db.prepare('INSERT INTO users (firstName, lastName, email, password, role) VALUES (?, ?, ?, ?, ?)')
+    const result = await db.prepare('INSERT INTO users (firstName, lastName, email, password, role) VALUES (?, ?, ?, ?, ?)')
       .run(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), passwordHash, requestedRole);
 
     const token = jwt.sign({ id: result.lastInsertRowid, role: requestedRole }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '24h' });
 
     res.status(201).send({ message: 'User registered successfully', patientId: result.lastInsertRowid, role: requestedRole, token, onboardingComplete: false });
   } catch (error) {
-    res.status(400).send({ error: error.code === 'SQLITE_CONSTRAINT_UNIQUE' ? 'Email already exists' : error.message });
+    res.status(400).send({ error: error.code === '23505' ? 'Email already exists' : error.message });
   }
 });
 module.exports = router;

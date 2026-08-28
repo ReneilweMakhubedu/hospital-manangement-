@@ -46,9 +46,9 @@ const staffOnly = (req, res, next) => {
 // GET TODAY'S QUEUE
 // IMPORTANT: This is /api/queue
 // =====================================
-router.get('/', auth, staffOnly, (req, res) => {
+router.get('/', auth, staffOnly, async (req, res) => {
   try {
-    const queue = db.prepare(`
+    const queue = await db.prepare(`
       SELECT
         q.id AS _id,
         q.queueNumber,
@@ -82,9 +82,9 @@ router.get('/', auth, staffOnly, (req, res) => {
 // =====================================
 // GET TODAY'S QUEUE - /today
 // =====================================
-router.get('/today', auth, staffOnly, (req, res) => {
+router.get('/today', auth, staffOnly, async (req, res) => {
   try {
-    const queue = db.prepare(`
+    const queue = await db.prepare(`
       SELECT
         q.id AS _id,
         q.queueNumber,
@@ -118,9 +118,9 @@ router.get('/today', auth, staffOnly, (req, res) => {
 // =====================================
 // GET PATIENTS
 // =====================================
-router.get('/patients', auth, staffOnly, (req, res) => {
+router.get('/patients', auth, staffOnly, async (req, res) => {
   try {
-    const patients = db.prepare(`
+    const patients = await db.prepare(`
       SELECT
         id,
         firstName,
@@ -146,7 +146,7 @@ router.get('/patients', auth, staffOnly, (req, res) => {
 // ADD PATIENT TO QUEUE
 // POST /api/queue
 // =====================================
-router.post('/', auth, staffOnly, (req, res) => {
+router.post('/', auth, staffOnly, async (req, res) => {
   const { patientId, reason } = req.body;
 
   if (!patientId) {
@@ -156,7 +156,7 @@ router.post('/', auth, staffOnly, (req, res) => {
   }
 
   try {
-    const patient = db.prepare(`
+    const patient = await db.prepare(`
       SELECT
         id,
         firstName,
@@ -174,11 +174,11 @@ router.post('/', auth, staffOnly, (req, res) => {
       });
     }
 
-    const today = db.prepare(`
+    const today = (await db.prepare(`
       SELECT date('now', 'localtime') AS today
-    `).get().today;
+    `).get()).today;
 
-    const existing = db.prepare(`
+    const existing = await db.prepare(`
       SELECT
         id,
         queueNumber,
@@ -195,7 +195,7 @@ router.post('/', auth, staffOnly, (req, res) => {
       });
     }
 
-    const last = db.prepare(`
+    const last = await db.prepare(`
       SELECT MAX(queueNumber) AS lastNumber
       FROM queue
       WHERE queueDate = ?
@@ -203,7 +203,7 @@ router.post('/', auth, staffOnly, (req, res) => {
 
     const queueNumber = (last?.lastNumber || 0) + 1;
 
-    const result = db.prepare(`
+    const result = await db.prepare(`
       INSERT INTO queue (
         patientId,
         queueNumber,
@@ -219,7 +219,7 @@ router.post('/', auth, staffOnly, (req, res) => {
       reason || ''
     );
 
-    const queueEntry = db.prepare(`
+    const queueEntry = await db.prepare(`
       SELECT
         q.id AS _id,
         q.queueNumber,
@@ -257,13 +257,13 @@ router.post('/', auth, staffOnly, (req, res) => {
 // CALL NEXT PATIENT
 // PUT /api/queue/next
 // =====================================
-router.put('/next', auth, staffOnly, (req, res) => {
+router.put('/next', auth, staffOnly, async (req, res) => {
   try {
-    const today = db.prepare(`
+    const today = (await db.prepare(`
       SELECT date('now', 'localtime') AS today
-    `).get().today;
+    `).get()).today;
 
-    const next = db.prepare(`
+    const next = await db.prepare(`
       SELECT id
       FROM queue
       WHERE queueDate = ?
@@ -278,7 +278,7 @@ router.put('/next', auth, staffOnly, (req, res) => {
       });
     }
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE queue
       SET
         status = 'called',
@@ -286,7 +286,7 @@ router.put('/next', auth, staffOnly, (req, res) => {
       WHERE id = ?
     `).run(next.id);
 
-    const updated = db.prepare(`
+    const updated = await db.prepare(`
       SELECT
         q.id AS _id,
         q.queueNumber,
@@ -324,7 +324,7 @@ router.put('/next', auth, staffOnly, (req, res) => {
 // UPDATE QUEUE STATUS
 // PUT /api/queue/:id/status
 // =====================================
-router.put('/:id/status', auth, staffOnly, (req, res) => {
+router.put('/:id/status', auth, staffOnly, async (req, res) => {
   const queueId = parseInt(req.params.id);
   const { status } = req.body;
 
@@ -343,7 +343,7 @@ router.put('/:id/status', auth, staffOnly, (req, res) => {
   }
 
   try {
-    const existing = db.prepare(`
+    const existing = await db.prepare(`
       SELECT id
       FROM queue
       WHERE id = ?
@@ -361,7 +361,7 @@ router.put('/:id/status', auth, staffOnly, (req, res) => {
       completedAt = new Date().toISOString();
     }
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE queue
       SET
         status = ?,
@@ -373,7 +373,7 @@ router.put('/:id/status', auth, staffOnly, (req, res) => {
       queueId
     );
 
-    const updated = db.prepare(`
+    const updated = await db.prepare(`
       SELECT
         q.id AS _id,
         q.queueNumber,
@@ -407,11 +407,11 @@ router.put('/:id/status', auth, staffOnly, (req, res) => {
 // =====================================
 // DELETE QUEUE ENTRY
 // =====================================
-router.delete('/:id', auth, staffOnly, (req, res) => {
+router.delete('/:id', auth, staffOnly, async (req, res) => {
   const queueId = parseInt(req.params.id);
 
   try {
-    const existing = db.prepare(`
+    const existing = await db.prepare(`
       SELECT id
       FROM queue
       WHERE id = ?
@@ -423,7 +423,7 @@ router.delete('/:id', auth, staffOnly, (req, res) => {
       });
     }
 
-    db.prepare(`
+    await db.prepare(`
       DELETE FROM queue
       WHERE id = ?
     `).run(queueId);
