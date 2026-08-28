@@ -1,6 +1,6 @@
 # ClinicFlow Hospital Management System
 
-ClinicFlow is a React and Express application for managing core clinic operations. It uses a local SQLite database, so MongoDB is not required.
+ClinicFlow is a React and Express application for managing core clinic operations. It uses PostgreSQL through Neon.
 
 ## Included modules
 
@@ -17,28 +17,17 @@ ClinicFlow is a React and Express application for managing core clinic operation
 
 ## Run locally
 
-Install dependencies once in each application folder:
+Install all dependencies from the project root:
 
 ```bash
-cd backend
 npm install
-
-cd ../frontend
-npm install
+npm run install:all
 ```
 
-Start the backend in one terminal:
+Start both applications from the project root:
 
 ```bash
-cd backend
-node server.js
-```
-
-Start the frontend in another terminal:
-
-```bash
-cd frontend
-npm start
+npm run dev
 ```
 
 Open `http://localhost:3000`. The API runs at `http://localhost:5000`.
@@ -47,14 +36,15 @@ Open `http://localhost:3000`. The API runs at `http://localhost:5000`.
 
 ## Data and configuration
 
-The database is automatically created at `backend/data/hospital.db`. Set a strong `JWT_SECRET` in `backend/.env` before using the application outside local development:
+Create `backend/.env` from `backend/.env.example`, then add your Neon connection string and a strong JWT secret:
 
 ```env
+DATABASE_URL=postgresql://username:password@host/database?sslmode=require
 JWT_SECRET=replace-with-a-long-random-secret
 PORT=5000
 ```
 
-The project’s current data layer is SQLite, not MongoDB; earlier documentation referring to Mongoose or a MongoDB connection string is obsolete.
+Never commit `backend/.env`; each collaborator should use their own local environment file or a development database.
 
 ## Verification
 

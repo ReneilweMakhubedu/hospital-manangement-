@@ -130,11 +130,15 @@ function PatientOnboarding() {
         setStatus({ type: 'success', message: 'Your information has been saved. Continue to the next step.' });
       } else {
         await saveProfile({ onboardingComplete: true });
-        if (selectedFiles.length) {
-          await uploadDocuments();
-        }
         localStorage.setItem('onboardingComplete', 'true');
-        navigate('/patient/dashboard');
+        navigate('/patient/dashboard', { replace: true });
+        if (selectedFiles.length) {
+          try {
+            await uploadDocuments();
+          } catch (error) {
+            console.error('Document upload failed after registration:', error);
+          }
+        }
       }
     } catch (error) {
       setStatus({ type: 'error', message: error.message });

@@ -56,7 +56,7 @@ const SignUp = () => {
           localStorage.setItem('userRole', data.role);
           localStorage.setItem('userEmail', formData.email);
           localStorage.setItem('onboardingComplete', 'false');
-          navigate('/patient/dashboard');
+          navigate('/patient/onboarding');
         } else {
           console.log('Error data:', data);
           setErrors({ ...errors, submit: data.error });
