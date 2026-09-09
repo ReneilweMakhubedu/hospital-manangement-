@@ -1,0 +1,64 @@
+﻿=== LOGINS ===
+LOGIN admin	OK	role=admin
+LOGIN super_admin	OK	role=super_admin
+LOGIN doctor	OK	role=doctor
+LOGIN doctor_alt	FAIL	
+LOGIN patient	OK	role=patient
+=== ADMIN ===
+admin.profile	200	OK
+admin.doctors	200	OK
+admin.doctor-catalog	200	OK
+admin.total-doctors	200	OK
+admin.total-patients	200	OK
+admin.doctor-overview	200	OK
+hr.vacancies	200	OK
+hr.staffing	200	OK
+hr.pmds	200	OK
+pharmacy.medicines	200	OK
+queue.today	200	OK
+appointments	200	OK
+patients.records	200	OK
+finance.summary	200	OK
+complaints	200	OK
+sms	200	OK
+theatres	200	OK
+waitlist	200	OK
+monitoring.kpis	200	OK
+audit	200	OK
+reporting.exports	200	OK
+cms.hero.all	403	{"error":"Only super admin can manage website content"}
+=== SUPER_ADMIN ===
+cms.hero.all	200	OK
+cms.hero.public	200	OK
+=== DOCTOR (doctor) ===
+doctor.profile	200	OK
+doctor.dashboard	200	OK
+doctor.queue	200	OK
+doctor.appointments	200	OK
+doctor.patients	200	OK
+doctor.orders	200	OK
+doctor.referrals	200	OK
+doctor.schedule.avail	200	OK
+doctor.schedule.week	200	OK
+doctor.governance	200	OK
+doctor.templates	200	OK
+doctor.prescriptions	200	OK
+emr.notes	200	OK
+=== PATIENT ===
+patient.dashboard	200	OK
+patient.profile	200	OK
+patient.appointments	200	OK
+patient.my-appointments	200	OK
+patient.medications	200	OK
+patient.meds.summary	200	OK
+patient.health.summary	200	OK
+patient.health.notes	200	OK
+patient.health.labs	200	OK
+patient.notifications	200	OK
+patient.feedback	200	OK
+patient.education	200	OK
+patient.queue-status	200	OK
+patient.care-team	200	OK
+patient.prescriptions	200	OK
+doctor.all.public	200	OK
+cms.hero	200	OK

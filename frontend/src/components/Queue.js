@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api/queue';
+import API_BASE from '../api';
+const API_URL = `${API_BASE}/queue`;
 
 function Queue() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ function Queue() {
         throw new Error(data.error || 'Unable to load queue');
       }
 
-      setQueue(data);
+      setQueue(Array.isArray(data) ? data : []);
     } catch (error) {
       setStatus({
         type: 'error',
@@ -176,10 +177,10 @@ function Queue() {
   // ==========================================
   const statusBadge = (currentStatus) => {
     const styles = {
-      waiting: 'bg-amber-100 text-amber-800',
-      called: 'bg-teal-100 text-teal-800',
-      completed: 'bg-emerald-100 text-emerald-800',
-      skipped: 'bg-slate-100 text-slate-600'
+      waiting: 'bg-amber-100 text-[#1f1f1f]',
+      called: 'bg-[#f8f8f8] text-[#e41e1f]',
+      completed: 'bg-[#f8f8f8] text-[#e41e1f]',
+      skipped: 'bg-[#f5f5f5] text-[#8b8b8b]'
     };
 
     return (
@@ -199,7 +200,7 @@ function Queue() {
   const priorityBadge = (priority) => {
     if (priority === 'urgent') {
       return (
-        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-[#e41e1f]">
           URGENT
         </span>
       );
@@ -214,21 +215,21 @@ function Queue() {
     }
 
     return (
-      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+      <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-xs font-bold text-[#8b8b8b]">
         NORMAL
       </span>
     );
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-900 sm:px-8">
+    <main className="min-h-screen bg-[#f8f8f8] px-5 py-8 text-[#1f1f1f] sm:px-8">
 
       <div className="mx-auto max-w-7xl">
 
         {/* BACK */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-teal-700 hover:text-teal-800"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#e41e1f] hover:text-[#e41e1f]"
         >
           <ArrowLeft size={16} />
           Back to dashboard
@@ -238,15 +239,15 @@ function Queue() {
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">
-              ClinicFlow
+            <p className="text-sm font-semibold uppercase tracking-wider text-[#e41e1f]">
+              RFH HMS · Patient Experience
             </p>
 
             <h1 className="mt-1 text-3xl font-bold tracking-tight">
               Queue Management
             </h1>
 
-            <p className="mt-2 text-slate-600">
+            <p className="mt-2 text-[#8b8b8b]">
               Manage today's patient queue and control patient flow.
             </p>
           </div>
@@ -255,7 +256,7 @@ function Queue() {
 
             <button
               onClick={loadEverything}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#8b8b8b]/40 bg-[#ffffff] px-4 py-2 text-sm font-semibold hover:bg-[#f8f8f8]"
             >
               <RefreshCw size={16} />
               Refresh
@@ -264,7 +265,7 @@ function Queue() {
             <button
               onClick={callNextPatient}
               disabled={isCalling || stats.waiting === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-bold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-300"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#e41e1f] px-5 py-2 text-sm font-bold text-[#ffffff] hover:bg-[#e41e1f] disabled:cursor-not-allowed disabled:bg-[#8b8b8b]"
             >
               {isCalling ? (
                 <LoaderCircle size={17} className="animate-spin" />
@@ -283,8 +284,8 @@ function Queue() {
           <div
             className={`mb-6 rounded-lg px-4 py-3 text-sm font-semibold ${
               status.type === 'success'
-                ? 'bg-emerald-50 text-emerald-800'
-                : 'bg-red-50 text-red-800'
+                ? 'bg-[#f8f8f8] text-[#e41e1f]'
+                : 'bg-[#f8f8f8] text-[#e41e1f]'
             }`}
           >
             {status.message}
@@ -321,21 +322,21 @@ function Queue() {
         </div>
 
         {/* QUEUE */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] shadow-sm">
 
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5 sm:px-6">
+          <div className="flex items-center justify-between border-b border-[#8b8b8b]/30 px-5 py-5 sm:px-6">
 
             <div>
               <h2 className="text-lg font-bold">
                 Today's Queue
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-[#8b8b8b]">
                 Patients currently moving through the clinic.
               </p>
             </div>
 
-            <div className="rounded-lg bg-teal-100 px-4 py-2 text-sm font-bold text-teal-800">
+            <div className="rounded-lg bg-[#f8f8f8] px-4 py-2 text-sm font-bold text-[#e41e1f]">
               {stats.waiting} waiting
             </div>
 
@@ -346,7 +347,7 @@ function Queue() {
             <div className="flex justify-center py-20">
               <LoaderCircle
                 size={32}
-                className="animate-spin text-teal-600"
+                className="animate-spin text-[#e41e1f]"
               />
             </div>
 
@@ -356,14 +357,14 @@ function Queue() {
 
               <Users
                 size={45}
-                className="mx-auto text-slate-300"
+                className="mx-auto text-[#8b8b8b]"
               />
 
-              <h3 className="mt-4 text-lg font-bold text-slate-700">
+              <h3 className="mt-4 text-lg font-bold text-[#1f1f1f]">
                 Queue is empty
               </h3>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-[#8b8b8b]">
                 No patients have checked in today.
               </p>
 
@@ -371,15 +372,15 @@ function Queue() {
 
           ) : (
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-[#8b8b8b]/25">
 
               {queue.map((patient) => (
 
                 <article
                   key={patient._id}
-                  className={`px-5 py-5 transition hover:bg-slate-50 sm:px-6 ${
+                  className={`px-5 py-5 transition hover:bg-[#f8f8f8] sm:px-6 ${
                     patient.status === 'called'
-                      ? 'bg-teal-50'
+                      ? 'bg-[#f8f8f8]'
                       : ''
                   }`}
                 >
@@ -389,7 +390,7 @@ function Queue() {
                     {/* PATIENT INFO */}
                     <div className="flex items-center gap-4">
 
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-lg font-black text-teal-800">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#f8f8f8] text-lg font-black text-[#e41e1f]">
                         #{patient.queueNumber}
                       </div>
 
@@ -405,11 +406,11 @@ function Queue() {
 
                         </div>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-[#8b8b8b]">
                           ID: {patient.idNumber}
                         </p>
 
-                        <p className="mt-1 text-sm text-slate-600">
+                        <p className="mt-1 text-sm text-[#8b8b8b]">
                           Reason: {patient.reason}
                         </p>
 
@@ -430,7 +431,7 @@ function Queue() {
                               'completed'
                             )
                           }
-                          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                          className="inline-flex items-center gap-2 rounded-lg bg-[#e41e1f] px-4 py-2 text-sm font-bold text-[#ffffff] hover:opacity-90"
                         >
                           <CheckCircle size={16} />
                           Complete
@@ -445,7 +446,7 @@ function Queue() {
                               'skipped'
                             )
                           }
-                          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center gap-2 rounded-lg border border-[#8b8b8b]/40 bg-[#ffffff] px-4 py-2 text-sm font-bold text-[#1f1f1f] hover:bg-[#f8f8f8]"
                         >
                           <SkipForward size={16} />
                           Skip
@@ -460,7 +461,7 @@ function Queue() {
                               'waiting'
                             )
                           }
-                          className="rounded-lg border border-teal-300 px-4 py-2 text-sm font-bold text-teal-700 hover:bg-teal-50"
+                          className="rounded-lg border border-[#8b8b8b]/40 px-4 py-2 text-sm font-bold text-[#e41e1f] hover:bg-[#f8f8f8]"
                         >
                           Return to Queue
                         </button>
@@ -491,21 +492,21 @@ function Queue() {
 // ==========================================
 function StatCard({ title, value, icon }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] p-5 shadow-sm">
 
       <div className="flex items-center justify-between">
 
         <div>
-          <p className="text-sm font-semibold text-slate-500">
+          <p className="text-sm font-semibold text-[#8b8b8b]">
             {title}
           </p>
 
-          <p className="mt-2 text-3xl font-black text-slate-900">
+          <p className="mt-2 text-3xl font-black text-[#1f1f1f]">
             {value}
           </p>
         </div>
 
-        <div className="rounded-xl bg-teal-100 p-3 text-teal-700">
+        <div className="rounded-xl bg-[#f8f8f8] p-3 text-[#e41e1f]">
           {icon}
         </div>
 

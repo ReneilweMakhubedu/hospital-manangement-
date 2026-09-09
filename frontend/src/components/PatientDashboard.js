@@ -1,280 +1,235 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, Clock3, FileText, HeartPulse, Settings, Bell, UserCircle2, LogOut, Edit2, X, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BrandLogo from './BrandLogo';
+import {
+  Bell,
+  CalendarDays,
+  Clock3,
+  HeartPulse,
+  LoaderCircle,
+  MessageSquare,
+  Pill,
+  UserCircle2,
+} from 'lucide-react';
 
-const times = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
-const API = 'http://localhost:5000/api';
+import { apiFetch } from '../auth';
+import PatientLayout from './patient/PatientLayout';
 
-function PatientDashboard() {
-  const navigate = useNavigate();
-  const email = localStorage.getItem('userEmail');
-  const token = localStorage.getItem('token');
-  
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ date: '', time: '' });
-  const [status, setStatus] = useState({ type: '', message: '' });
-
-  const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
-
-  // Load patient's appointments
-  useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        const response = await fetch(`${API}/patient/my-appointments`, { headers: headers() });
-        if (response.ok) {
-          const data = await response.json();
-          setAppointments(Array.isArray(data) ? data : []);
-        } else {
-          setAppointments([]);
-        }
-      } catch (error) {
-        console.error('Error loading appointments:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadAppointments();
-  }, [token]);
-
-  // Reschedule appointment
-  const handleReschedule = async (appointmentId) => {
-    if (!editForm.date || !editForm.time) {
-      setStatus({ type: 'error', message: 'Please select a date and time' });
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API}/patient/appointments/${appointmentId}/reschedule`, {
-        method: 'PUT',
-        headers: headers(),
-        body: JSON.stringify({ date: editForm.date, time: editForm.time })
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setAppointments(appointments.map(a => a._id === appointmentId ? data : a));
-        setEditingId(null);
-        setEditForm({ date: '', time: '' });
-        setStatus({ type: 'success', message: 'Appointment rescheduled successfully!' });
-        setTimeout(() => setStatus({ type: '', message: '' }), 3000);
-      } else {
-        setStatus({ type: 'error', message: data.error || 'Unable to reschedule' });
-      }
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message });
-    }
-  };
-
-  // Cancel appointment
-  const handleCancel = async (appointmentId) => {
-    if (!window.confirm('Are you sure you want to cancel this appointment? The slot will be available for other patients.')) return;
-
-    try {
-      const response = await fetch(`${API}/patient/appointments/${appointmentId}`, {
-        method: 'DELETE',
-        headers: headers()
-      });
-
-      if (response.ok) {
-        setAppointments(appointments.filter(a => a._id !== appointmentId));
-        setStatus({ type: 'success', message: 'Appointment cancelled. Slot is now available for others.' });
-        setTimeout(() => setStatus({ type: '', message: '' }), 3000);
-      } else {
-        const data = await response.json();
-        setStatus({ type: 'error', message: data.error || 'Unable to cancel' });
-      }
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message });
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
-  };
-
-  const cards = [
-    { title: 'My Profile', description: 'View or update your personal information.', icon: UserCircle2, path: '/patient/onboarding' },
-    { title: 'Medical Records', description: 'Review your health notes and visit history.', icon: FileText, path: '/medical-records' },
-    { title: 'Prescriptions', description: 'View your active prescriptions and pharmacy orders.', icon: HeartPulse, path: '/pharmacy' },
-    { title: 'Queue Status', description: 'Track your current waiting status at the clinic.', icon: Clock3, path: '/queue' },
-    { title: 'Notifications', description: 'See alerts from doctors and clinic staff.', icon: Bell, path: '/patient/onboarding' },
-    { title: 'Settings', description: 'Manage your account preferences.', icon: Settings, path: '/settings' },
-  ];
-
+function StatusBanner({ status }) {
+  if (!status?.message) return null;
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-blue-950">
-      {/* Header/Sidebar */}
-      <div className="fixed left-0 top-0 h-screen w-72 bg-gradient-to-b from-slate-950 via-teal-950 to-blue-950 text-white shadow-xl overflow-y-auto">
-        <div className="p-6 border-b border-teal-600 [&>h1]:hidden">
-          <div className="flex items-center gap-3">
-            <BrandLogo className="h-12 w-12 shrink-0" />
-            <h2 className="text-3xl font-bold">PMS</h2>
-          </div>
-          <h1 className="text-3xl font-bold">🏥 PMS</h1>
-          <p className="text-sm mt-2 text-teal-100">Patient Portal</p>
-        </div>
-
-        <nav className="mt-6 space-y-2 px-3">
-          <div className="px-3 py-2">
-            <p className="text-xs font-semibold text-teal-200 uppercase">Account</p>
-            <p className="text-sm text-teal-100 mt-1">{email}</p>
-          </div>
-          <button onClick={() => navigate('/patient/onboarding')} className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-teal-600 text-left">
-            <UserCircle2 size={20} /> My Profile
-          </button>
-          <button onClick={() => navigate('/patient/dashboard')} className="flex items-center gap-3 w-full px-3 py-3 rounded-lg bg-teal-600 text-left">
-            <CalendarDays size={20} /> Dashboard
-          </button>
-          <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-teal-600 text-left mt-8">
-            <LogOut size={20} /> Logout
-          </button>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="ml-72 px-8 py-8">
-        {/* Header */}
-        <section className="mb-8 rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-600 p-8 text-white shadow-lg">
-          <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.24em] text-cyan-100">Patient dashboard</p>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight">Welcome back{email ? `, ${email.split('@')[0]}` : ''}</h1>
-            <p className="mt-3 text-sm text-teal-100">Manage your appointments, medical records, and health information.</p>
-          </div>
-        </section>
-
-        {/* Status Messages */}
-        {status.message && (
-          <div className={`mb-6 rounded-lg px-4 py-3 ${status.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-            {status.message}
-          </div>
-        )}
-
-        {/* Appointments Section */}
-        <section className="mb-8 rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold">
-              <CalendarDays size={20} className="text-teal-600" /> My Appointments
-            </h2>
-          </div>
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="text-slate-500">Loading appointments...</div>
-            </div>
-          ) : appointments.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-slate-500">No appointments scheduled yet.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {appointments.map((appointment) => (
-                <div key={appointment._id} className="px-6 py-5">
-                  {editingId === appointment._id ? (
-                    // Edit Mode
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">New Date</label>
-                          <input
-                            type="date"
-                            min={new Date().toISOString().slice(0, 10)}
-                            value={editForm.date}
-                            onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">New Time</label>
-                          <select
-                            value={editForm.time}
-                            onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600"
-                          >
-                            <option value="">Select time</option>
-                            {times.map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleReschedule(appointment._id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                        >
-                          <Check size={16} /> Confirm
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
-                        >
-                          <X size={16} /> Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    // View Mode
-                    <>
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-bold text-slate-900">Dr. {appointment.doctorName}</h3>
-                          <p className="text-sm text-slate-600">{appointment.specialty}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-teal-700">{appointment.date}</p>
-                          <p className="text-sm text-slate-600">{appointment.time}</p>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-600 mb-4">{appointment.reason}</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingId(appointment._id);
-                            setEditForm({ date: appointment.date, time: appointment.time });
-                          }}
-                          className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-                        >
-                          <Edit2 size={16} /> Reschedule
-                        </button>
-                        <button
-                          onClick={() => handleCancel(appointment._id)}
-                          className="flex items-center gap-2 px-3 py-2 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100"
-                        >
-                          <X size={16} /> Cancel
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Quick Links */}
-        <section>
-          <h2 className="text-lg font-bold mb-4 text-slate-900">Other Options</h2>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {cards.map(({ title, description, icon: Icon, path }) => (
-              <button
-                type="button"
-                key={title}
-                onClick={() => navigate(path)}
-                className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
-                  <Icon size={18} />
-                </div>
-                <h3 className="font-bold text-slate-900">{title}</h3>
-                <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
-              </button>
-            ))}
-          </div>
-        </section>
-      </div>
-    </main>
+    <div
+      className={`mb-6 rounded-xl px-4 py-3 text-sm ${
+        status.type === 'error' ? 'bg-[#f8f8f8] text-[#e41e1f]' : 'bg-[#f8f8f8] text-[#e41e1f]'
+      }`}
+    >
+      {status.message}
+    </div>
   );
 }
 
-export default PatientDashboard;
+function WelcomeCard({ icon: Icon, label, value, detail, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#8b8b8b]/40 hover:shadow-md"
+    >
+      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#f8f8f8] text-[#e41e1f]">
+        <Icon size={18} />
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#8b8b8b]">{label}</p>
+      <p className="mt-1 text-lg font-bold text-[#1f1f1f]">{value}</p>
+      {detail && <p className="mt-1 text-sm text-[#8b8b8b]">{detail}</p>}
+    </button>
+  );
+}
+
+export default function PatientDashboard() {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState({ type: '', message: '' });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/patient/dashboard', { navigate });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Unable to load dashboard');
+        }
+        const json = await res.json();
+        if (!cancelled) setData(json);
+      } catch (error) {
+        if (!cancelled) setStatus({ type: 'error', message: error.message });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const firstName = data?.firstName || data?.profile?.firstName || localStorage.getItem('userEmail')?.split('@')[0];
+  const upcoming = data?.upcomingAppointments || [];
+  const medSummary = data?.medicationSummary || {};
+  const unread = data?.unreadNotifications ?? 0;
+  const queue = data?.queueStatus;
+  const tips = data?.healthTips || [];
+  const recentAppointments = upcoming.slice(0, 3);
+  const recentNotes = data?.recentNotifications || data?.notifications || [];
+
+  return (
+    <PatientLayout
+      title={`Welcome back${firstName ? `, ${firstName}` : ''}`}
+      subtitle="Your appointments, medications, and care updates in one place."
+    >
+      <StatusBanner status={status} />
+
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 py-20 text-[#8b8b8b]">
+          <LoaderCircle className="animate-spin" size={20} /> Loading your dashboard…
+        </div>
+      ) : (
+        <>
+          <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <WelcomeCard
+              icon={CalendarDays}
+              label="Upcoming appointment"
+              value={
+                upcoming[0]
+                  ? `${upcoming[0].date || '—'}${upcoming[0].time ? ` · ${upcoming[0].time}` : ''}`
+                  : 'None scheduled'
+              }
+              detail={
+                upcoming[0]
+                  ? upcoming[0].doctorName || upcoming[0].department || upcoming[0].purpose || 'Booked visit'
+                  : 'Book a visit when you need care'
+              }
+              onClick={() => navigate('/patient/appointments')}
+            />
+            <WelcomeCard
+              icon={Pill}
+              label="Medication status"
+              value={
+                medSummary.activeCount != null
+                  ? `${medSummary.activeCount} active`
+                  : 'View medications'
+              }
+              detail={
+                medSummary.nextCollectionDate
+                  ? `Next CCMDD collection: ${medSummary.nextCollectionDate}`
+                  : 'Prescriptions and reminders'
+              }
+              onClick={() => navigate('/patient/medications')}
+            />
+            <WelcomeCard
+              icon={Bell}
+              label="Notifications"
+              value={unread > 0 ? `${unread} unread` : 'All caught up'}
+              detail="Appointment and medication alerts"
+              onClick={() => navigate('/patient/notifications')}
+            />
+            <WelcomeCard
+              icon={Clock3}
+              label="Queue status"
+              value={
+                queue
+                  ? `Ticket ${queue.queueNumber || queue.ticketNumber || '—'}`
+                  : 'Not in queue'
+              }
+              detail={
+                queue
+                  ? `${queue.status || 'Waiting'}${
+                      queue.estimatedWaitMinutes != null
+                        ? ` · ~${queue.estimatedWaitMinutes} min`
+                        : ''
+                    }`
+                  : 'Shown when you check in at reception'
+              }
+              onClick={() => navigate('/patient/appointments')}
+            />
+          </section>
+
+          <section className="mb-8">
+            <h2 className="mb-3 text-lg font-bold text-[#1f1f1f]">Quick actions</h2>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { label: 'Book appointment', path: '/patient/appointments', icon: CalendarDays },
+                { label: 'My medications', path: '/patient/medications', icon: Pill },
+                { label: 'Health records', path: '/patient/records', icon: HeartPulse },
+                { label: 'Give feedback', path: '/patient/feedback', icon: MessageSquare },
+                { label: 'Update profile', path: '/patient/profile', icon: UserCircle2 },
+              ].map(({ label, path, icon: Icon }) => (
+                <button
+                  key={path}
+                  type="button"
+                  onClick={() => navigate(path)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#e41e1f] px-4 py-2.5 text-sm font-semibold text-[#ffffff] shadow-sm transition hover:bg-[#e41e1f]"
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section className="rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] shadow-sm">
+              <div className="border-b border-[#8b8b8b]/30 px-5 py-4">
+                <h2 className="font-bold text-[#1f1f1f]">Recent appointments</h2>
+              </div>
+              {recentAppointments.length === 0 ? (
+                <p className="px-5 py-8 text-sm text-[#8b8b8b]">No upcoming appointments yet.</p>
+              ) : (
+                <ul className="divide-y divide-[#8b8b8b]/25">
+                  {recentAppointments.map((apt) => (
+                    <li key={apt._id || apt.id || `${apt.date}-${apt.time}`} className="px-5 py-4">
+                      <p className="font-semibold text-[#1f1f1f]">
+                        {apt.doctorName || apt.department || apt.purpose || 'Appointment'}
+                      </p>
+                      <p className="text-sm text-[#8b8b8b]">
+                        {apt.date} {apt.time ? `· ${apt.time}` : ''}
+                      </p>
+                      {apt.reason && <p className="mt-1 text-sm text-[#8b8b8b]">{apt.reason}</p>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] shadow-sm">
+              <div className="border-b border-[#8b8b8b]/30 px-5 py-4">
+                <h2 className="font-bold text-[#1f1f1f]">Recent activity</h2>
+              </div>
+              {Array.isArray(recentNotes) && recentNotes.length > 0 ? (
+                <ul className="divide-y divide-[#8b8b8b]/25">
+                  {recentNotes.slice(0, 5).map((n) => (
+                    <li key={n._id || n.id || n.title} className="px-5 py-4">
+                      <p className="font-semibold text-[#1f1f1f]">{n.title || n.type || 'Update'}</p>
+                      <p className="text-sm text-[#8b8b8b]">{n.body || n.message || ''}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : tips.length > 0 ? (
+                <ul className="divide-y divide-[#8b8b8b]/25">
+                  {tips.map((tip, i) => (
+                    <li key={i} className="px-5 py-4 text-sm text-[#8b8b8b]">
+                      {typeof tip === 'string' ? tip : tip.title || tip.body}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-5 py-8 text-sm text-[#8b8b8b]">
+                  Check notifications for appointment and medication updates.
+                </p>
+              )}
+            </section>
+          </div>
+        </>
+      )}
+    </PatientLayout>
+  );
+}

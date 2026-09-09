@@ -1,25 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Building2,
   Calendar,
+  ChartBar,
+  ChevronLeft,
+  ChevronRight,
   Clipboard,
   Cog,
   HeartPulse,
   Hospital,
   Shield,
   Users,
-  Clock,
-  ChartBar,
-  MessageCircle
+  Wallet,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import BrandLogo from './BrandLogo';
+import { asiphileniPillars, brand } from '../brand';
+import API_BASE, { API_ORIGIN } from '../api';
 
-const Button = ({ children, primary, onClick, ...props }) => (
+const Button = ({ children, primary, className = '', onClick, ...props }) => (
   <button
-    className={`inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-colors ${
+    className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium shadow-sm transition-colors ${
       primary
-        ? "bg-teal-600 text-white hover:bg-teal-700"
-        : "bg-white text-gray-700 hover:bg-gray-100"
-    }`}
+        ? 'bg-[#e41e1f] text-[#ffffff] hover:opacity-90'
+        : 'border border-[#8b8b8b]/40 bg-[#ffffff] text-[#1f1f1f] hover:bg-[#f8f8f8]'
+    } ${className}`}
     onClick={onClick}
     {...props}
   >
@@ -27,338 +32,279 @@ const Button = ({ children, primary, onClick, ...props }) => (
   </button>
 );
 
-const Card = ({ icon: Icon, title, description, dark = false }) => (
-  <div className={`rounded-xl p-6 transition hover:-translate-y-1 ${
-    dark
-      ? 'border border-teal-200/15 bg-white/10 shadow-xl shadow-slate-950/30 backdrop-blur-sm hover:bg-white/15'
-      : 'bg-white shadow-lg hover:shadow-xl'
-  }`}>
-    <Icon className={`mb-4 h-10 w-10 ${dark ? 'text-teal-300' : 'text-teal-600'}`} />
+const pillarIcons = {
+  infrastructure: Building2,
+  hr: Users,
+  finance: Wallet,
+  patient: HeartPulse,
+  monitoring: ChartBar,
+};
 
-    <h3 className={`mb-3 text-xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>
-      {title}
-    </h3>
+const fallbackSlides = [
+  {
+    _id: 'fallback-1',
+    title: brand.name,
+    subtitle: `${brand.tagline}. Built to support tertiary referral care and ${brand.programme}.`,
+    ctaLabel: 'Access the system',
+    ctaLink: '/login',
+    imageUrl: null,
+  },
+];
 
-    <p className={`mb-5 ${dark ? 'text-teal-50/85' : 'text-gray-600'}`}>
-      {description}
-    </p>
-
-    <Button primary>
-      Learn More
-    </Button>
-  </div>
-);
-
-const Section = ({ children, bg }) => (
-  <section className={`py-20 ${bg}`}>
-    <div className="container mx-auto px-4">
-      {children}
-    </div>
-  </section>
-);
+function mediaUrl(path) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_ORIGIN}${path}`;
+}
 
 function Home() {
-
   const navigate = useNavigate();
+  const [slides, setSlides] = useState(fallbackSlides);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/cms/hero`);
+        const data = await response.json();
+        if (!cancelled && response.ok && Array.isArray(data) && data.length > 0) {
+          setSlides(data);
+          setIndex(0);
+        }
+      } catch {
+        /* keep fallback */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (slides.length < 2) return undefined;
+    const timer = setInterval(() => {
+      setIndex((current) => (current + 1) % slides.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  // Preload carousel images so slide changes stay sharp
+  useEffect(() => {
+    slides.forEach((item) => {
+      const url = mediaUrl(item.imageUrl);
+      if (!url) return;
+      const preload = new Image();
+      preload.src = url;
+    });
+  }, [slides]);
+
+  const slide = slides[index] || fallbackSlides[0];
+  const image = mediaUrl(slide.imageUrl);
+
+  const go = (link) => {
+    if (!link) {
+      navigate('/login');
+      return;
+    }
+    if (link.startsWith('http')) {
+      window.location.assign(link);
+      return;
+    }
+    navigate(link);
+  };
 
   return (
-
-    <div className="min-h-screen bg-gray-50">
-
-      {/* ================= HEADER ================= */}
-
-      <header className="border-b border-teal-300/15 bg-gradient-to-r from-slate-950 via-teal-950 to-blue-950 shadow-xl shadow-teal-950/30">
-
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-
+    <div className="min-h-screen bg-[#f5f5f5]">
+      <header className="border-b border-[#8b8b8b]/25 bg-[#ffffff]">
+        <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-
-            <img
-              src="/images/pms-brand-hero.png"
-              alt="PMS Patient Management System"
-              className="h-14 w-24 rounded-lg object-cover object-center shadow-lg shadow-cyan-500/20"
-            />
-
+            <BrandLogo className="h-12 w-12 shrink-0" />
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold tracking-wide text-white">PMS</h1>
-              <p className="text-xs font-medium text-teal-200">Patient Management System</p>
+              <h1 className="text-xl font-bold tracking-wide text-[#1f1f1f]">{brand.shortName}</h1>
+              <p className="text-xs font-medium text-[#8b8b8b]">{brand.hospital}</p>
             </div>
-
           </div>
-
           <div className="flex gap-3">
-
-            <Button
-              primary
-              onClick={() => navigate("/login")}
-            >
-              Login
+            <Button primary onClick={() => navigate('/login')}>
+              Staff login
             </Button>
-
-            <Button
-              className="border border-white/25 bg-white/10 text-white hover:bg-white/20"
-              onClick={() => navigate("/signup")}
-            >
-              Register
-            </Button>
-
+            <Button onClick={() => navigate('/signup')}>Register</Button>
           </div>
-
         </div>
-
       </header>
 
-      {/* ================= HERO ================= */}
+      <section className="relative isolate min-h-[78vh] overflow-hidden bg-[#1f1f1f]">
+        {image ? (
+          <img
+            src={image}
+            alt=""
+            decoding="async"
+            fetchPriority="high"
+            sizes="100vw"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            style={{ imageRendering: 'auto' }}
+            key={slide._id || index}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[#f8f8f8]" aria-hidden />
+        )}
 
-      <section
-        className="relative isolate overflow-hidden bg-teal-950 py-24 sm:py-32"
-        style={{ backgroundImage: "url('/images/pms-brand-hero.png')", backgroundSize: "cover", backgroundPosition: "center" }}
-      >
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/95 via-teal-950/85 to-blue-950/70" />
-        <div className="container relative mx-auto px-6">
-          <div className="max-w-2xl">
-            <span className="inline-flex rounded-full border border-teal-200/30 bg-white/10 px-4 py-1 text-sm font-medium text-teal-50 backdrop-blur-sm">
-              Smarter care. Better patient experiences.
-            </span>
-            <h1 className="mt-6 text-5xl font-bold tracking-tight text-white sm:text-6xl">
-              Care that flows with your clinic.
+        <div className="container relative mx-auto flex min-h-[78vh] flex-col justify-center px-6 py-20">
+          <div className="max-w-3xl rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-6 shadow-sm sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#e41e1f]">
+              {brand.hospital} · {brand.location}
+            </p>
+            <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#1f1f1f] sm:text-6xl">
+              {slide.title || brand.name}
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-teal-50">
-              PMS brings appointments, patient records, prescriptions and pharmacy operations together in one secure, easy-to-use system.
+            <p className="mt-6 max-w-xl text-lg leading-8 text-[#8b8b8b]">
+              {slide.subtitle || brand.tagline}
             </p>
             <div className="mt-9 flex flex-wrap gap-4">
-              <Button primary onClick={() => navigate("/login")}>Access PMS</Button>
-              <Button onClick={() => navigate("/signup")}>Create an account</Button>
+              <Button primary onClick={() => go(slide.ctaLink || '/login')}>
+                {slide.ctaLabel || 'Access the system'}
+              </Button>
+              <Button onClick={() => navigate('/signup')}>Create an account</Button>
             </div>
-            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm font-medium text-teal-50">
-              <span>✓ Streamlined appointments</span>
-              <span>✓ Connected patient care</span>
-              <span>✓ Reliable clinic operations</span>
+            <p className="mt-8 text-sm font-medium text-[#8b8b8b]">
+              {brand.programmeLabel} — Infrastructure · HR · Finance · Patient Experience · Monitoring
+            </p>
+          </div>
+
+          {slides.length > 1 && (
+            <div className="mt-10 flex items-center gap-3">
+              <button
+                type="button"
+                aria-label="Previous slide"
+                onClick={() => setIndex((current) => (current - 1 + slides.length) % slides.length)}
+                className="rounded-full border border-[#8b8b8b]/40 bg-[#ffffff] p-2 text-[#1f1f1f] hover:bg-[#f8f8f8]"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex gap-2">
+                {slides.map((item, i) => (
+                  <button
+                    key={item._id || i}
+                    type="button"
+                    aria-label={`Go to slide ${i + 1}`}
+                    onClick={() => setIndex(i)}
+                    className={`h-2.5 w-2.5 rounded-full ${i === index ? 'bg-[#e41e1f]' : 'bg-[#8b8b8b]'}`}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                aria-label="Next slide"
+                onClick={() => setIndex((current) => (current + 1) % slides.length)}
+                className="rounded-full border border-[#8b8b8b]/40 bg-[#ffffff] p-2 text-[#1f1f1f] hover:bg-[#f8f8f8]"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
+          )}
+        </div>
+      </section>
+
+      <section className="bg-[#ffffff] py-20">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="text-3xl font-bold text-[#1f1f1f] sm:text-4xl">
+              Five pillars of {brand.programme}
+            </h2>
+            <p className="mt-4 text-[#8b8b8b]">
+              Every module in this system maps to a provincial turnaround pillar so hospital and DoH
+              priorities stay visible.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {asiphileniPillars.map((pillar) => {
+              const Icon = pillarIcons[pillar.id] || Hospital;
+              return (
+                <div
+                  key={pillar.id}
+                  className="rounded-xl border border-[#8b8b8b]/25 bg-[#f8f8f8] p-6 transition hover:border-[#e41e1f]"
+                >
+                  <Icon className="mb-4 h-10 w-10 text-[#e41e1f]" />
+                  <h3 className="mb-2 text-xl font-bold text-[#1f1f1f]">{pillar.title}</h3>
+                  <p className="mb-4 text-sm text-[#8b8b8b]">{pillar.description}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8b8b8b]">
+                    {pillar.modules.length} module{pillar.modules.length === 1 ? '' : 's'}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* ================= MAIN MODULES ================= */}
-
-      <Section bg="bg-gradient-to-br from-slate-950 via-teal-950 to-blue-950">
-
-        <h2 className="text-4xl font-bold text-center text-white mb-12">
-
-          Core PMS Modules
-
-        </h2>
-
-        <div className="grid md:grid-cols-3 gap-8">
-
-          <Card
-
-            icon={Clipboard}
-
-            title="Digital Reception"
-
-            description="Replace the paper sign-in register with secure electronic patient check-in."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Hospital}
-
-            title="Electronic Patient Records"
-
-            description="Replace paper files with secure electronic patient records available instantly."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Users}
-
-            title="Smart Queue Management"
-
-            description="Automatically generate queue numbers and monitor waiting patients in real time."
-
-            dark
-
-          />
-
-        </div>
-
-      </Section>
-
-      {/* ================= FEATURES ================= */}
-
-      <Section bg="bg-gradient-to-br from-slate-950 via-teal-950 to-blue-950">
-
-        <h2 className="text-4xl font-bold text-center text-white mb-12">
-
-          Why PMS?
-
-        </h2>
-
-        <div className="grid md:grid-cols-3 gap-8">
-
-          <Card
-
-            icon={Clipboard}
-
-            title="Digital Check-In"
-
-            description="Patients sign in electronically instead of using paper registers."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Users}
-
-            title="Queue Management"
-
-            description="Replace numbered queue cards with a digital queue system."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Calendar}
-
-            title="Appointment Automation"
-
-            description="Bookings are approved automatically based on doctor availability."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Shield}
-
-            title="Secure Medical Records"
-
-            description="Patient files remain safe and never get lost."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={HeartPulse}
-
-            title="Clinical History"
-
-            description="Every consultation, diagnosis and prescription is stored permanently."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={ChartBar}
-
-            title="Reports"
-
-            description="Generate daily, weekly and monthly clinic reports instantly."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Clock}
-
-            title="Live Dashboard"
-
-            description="Monitor waiting patients in real time."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={Cog}
-
-            title="Staff Management"
-
-            description="Manage receptionists, nurses, doctors and pharmacists."
-
-            dark
-
-          />
-
-          <Card
-
-            icon={MessageCircle}
-
-            title="Internal Chat Board"
-
-            description="Allow receptionists, doctors and pharmacists to communicate instantly."
-
-            dark
-
-          />
-
-        </div>
-
-      </Section>
-
-      {/* ================= FOOTER ================= */}
-
-      <footer className="bg-teal-700 text-white py-8 mt-10">
-
-        <div className="container mx-auto text-center">
-
-          <h2 className="text-2xl font-bold">
-
-            PMS Patient Management System
-
+      <section className="bg-[#f5f5f5] py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="mb-4 text-center text-3xl font-bold text-[#1f1f1f] sm:text-4xl">
+            Core hospital modules
           </h2>
-
-          <p className="mt-3">
-
-            Digital Clinic Operations Platform
-
+          <p className="mx-auto mb-12 max-w-2xl text-center text-[#8b8b8b]">
+            Patient flow, clinical records, HR, finance, infrastructure, and provincial reporting —
+            organised around the five #OperationAsiphileni pillars.
           </p>
-
-          <p className="mt-2">
-
-            Replacing Paper.
-            <br />
-
-            Reducing Queues.
-            <br />
-
-            Improving Patient Care.
-
-          </p>
-
-          <p className="mt-6">
-
-            © 2026 PMS Patient Management System. All Rights Reserved.
-
-          </p>
-
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              {
+                icon: Clipboard,
+                title: 'Digital reception & queue',
+                body: 'Electronic check-in and real-time waiting list control for outpatient flow.',
+              },
+              {
+                icon: Hospital,
+                title: 'Electronic patient records',
+                body: 'Secure role-based records to reduce lost files and support clinical continuity.',
+              },
+              {
+                icon: Calendar,
+                title: 'Appointments & pharmacy',
+                body: 'Scheduling, prescriptions, and medication stock in one connected workflow.',
+              },
+              {
+                icon: Shield,
+                title: 'Role-based access',
+                body: 'Patients, doctors, and administrators with authenticated, role-aware entry.',
+              },
+              {
+                icon: Cog,
+                title: 'Staff coordination',
+                body: 'Internal chat and operational dashboards for day-to-day hospital coordination.',
+              },
+              {
+                icon: ChartBar,
+                title: 'Monitoring & reporting',
+                body: 'Operational KPIs, DHIS2/HPRS-shaped exports, and provincial reporting support.',
+              },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="rounded-xl border border-[#8b8b8b]/25 bg-[#ffffff] p-6">
+                <Icon className="mb-4 h-10 w-10 text-[#e41e1f]" />
+                <h3 className="mb-2 text-xl font-bold text-[#1f1f1f]">{title}</h3>
+                <p className="text-[#8b8b8b]">{body}</p>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
+      <footer className="border-t border-[#8b8b8b]/25 bg-[#ffffff] py-10">
+        <div className="container mx-auto px-4 text-center">
+          <div className="mb-3 flex items-center justify-center gap-3">
+            <BrandLogo className="h-10 w-10" />
+            <h2 className="text-2xl font-bold text-[#1f1f1f]">{brand.shortName}</h2>
+          </div>
+          <p className="text-[#8b8b8b]">
+            {brand.hospital} · Tertiary referral hospital, {brand.location}
+          </p>
+          <p className="mt-2 text-sm text-[#e41e1f]">{brand.programmeLabel}</p>
+          <p className="mt-6 text-sm text-[#8b8b8b]">{brand.copyright}</p>
+        </div>
       </footer>
-
     </div>
-
   );
-
 }
 
 export default Home;

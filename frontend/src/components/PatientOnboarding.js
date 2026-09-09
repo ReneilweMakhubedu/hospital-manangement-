@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, UploadCloud, FileText, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PatientOnboardingProgress from './PatientOnboardingProgress';
 
-const API = 'http://localhost:5000/api/patient';
+import API_BASE from '../api';
+const API = `${API_BASE}/patient`;
 const initialForm = {
   firstName: '',
   lastName: '',
@@ -19,11 +20,15 @@ const initialForm = {
   currentMedications: '',
   previousMedicalInfo: '',
   nextOfKin: '',
+  languagePreference: 'English',
+  smsConsent: false,
+  popiaConsent: false,
+  preferredChannel: 'SMS',
 };
 
 function PatientOnboarding() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState(1);
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(initialForm);
   const [documents, setDocuments] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -64,8 +69,11 @@ function PatientOnboarding() {
   }, [navigate]);
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((current) => ({ ...current, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setFormData((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const saveProfile = async (extra = {}) => {
@@ -124,11 +132,18 @@ function PatientOnboarding() {
     setStatus({ type: '', message: '' });
 
     try {
-      if (phase < 3) {
+      if (step < 3) {
         await saveProfile();
-        setPhase((current) => current + 1);
+        setStep((current) => current + 1);
         setStatus({ type: 'success', message: 'Your information has been saved. Continue to the next step.' });
       } else {
+        if (!formData.popiaConsent) {
+          setStatus({
+            type: 'error',
+            message: 'Please confirm POPIA consent to complete registration.',
+          });
+          return;
+        }
         await saveProfile({ onboardingComplete: true });
         localStorage.setItem('onboardingComplete', 'true');
         navigate('/patient/dashboard', { replace: true });
@@ -147,8 +162,8 @@ function PatientOnboarding() {
     }
   };
 
-  const renderPhase = () => {
-    if (phase === 1) {
+  const renderStep = () => {
+    if (step === 1) {
       return (
         <div className="grid gap-4 lg:grid-cols-2">
           <Field label="First name" name="firstName" value={formData.firstName} onChange={handleChange} />
@@ -164,7 +179,7 @@ function PatientOnboarding() {
       );
     }
 
-    if (phase === 2) {
+    if (step === 2) {
       return (
         <div className="space-y-4">
           <TextareaField label="Allergies" name="allergies" value={formData.allergies} onChange={handleChange} rows={3} />
@@ -178,22 +193,86 @@ function PatientOnboarding() {
 
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-3 text-slate-700">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField
+            label="Preferred language"
+            name="languagePreference"
+            value={formData.languagePreference || 'English'}
+            onChange={handleChange}
+            options={[
+              { value: 'English', label: 'English' },
+              { value: 'Afrikaans', label: 'Afrikaans' },
+              { value: 'isiZulu', label: 'isiZulu' },
+              { value: 'siSwati', label: 'siSwati' },
+              { value: 'Xitsonga', label: 'Xitsonga' },
+              { value: 'Sepedi', label: 'Sepedi' },
+              { value: 'Other', label: 'Other' },
+            ]}
+          />
+          <SelectField
+            label="Preferred channel"
+            name="preferredChannel"
+            value={formData.preferredChannel || 'SMS'}
+            onChange={handleChange}
+            options={[
+              { value: 'SMS', label: 'SMS' },
+              { value: 'WHATSAPP', label: 'WhatsApp' },
+              { value: 'APP', label: 'App / portal' },
+              { value: 'EMAIL', label: 'Email' },
+            ]}
+          />
+        </div>
+
+        <label className="flex items-start gap-3 rounded-2xl border border-[#8b8b8b]/30 bg-[#f8f8f8] px-4 py-3 text-sm">
+          <input
+            type="checkbox"
+            name="smsConsent"
+            checked={Boolean(formData.smsConsent)}
+            onChange={handleChange}
+            className="mt-1 h-4 w-4 rounded border-[#8b8b8b]/40 text-[#e41e1f] focus:ring-[#e41e1f]"
+          />
+          <span>
+            <span className="font-semibold text-[#1f1f1f]">SMS reminders</span>
+            <span className="mt-0.5 block text-xs text-[#8b8b8b]">
+              Allow appointment and medication reminders by SMS
+            </span>
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 rounded-2xl border border-[#8b8b8b]/30 bg-[#f8f8f8] px-4 py-3 text-sm">
+          <input
+            type="checkbox"
+            name="popiaConsent"
+            checked={Boolean(formData.popiaConsent)}
+            onChange={handleChange}
+            required
+            className="mt-1 h-4 w-4 rounded border-[#8b8b8b]/40 text-[#e41e1f] focus:ring-[#e41e1f]"
+          />
+          <span>
+            <span className="font-semibold text-[#1f1f1f]">POPIA consent (required)</span>
+            <span className="mt-0.5 block text-xs text-[#8b8b8b]">
+              I consent to Rob Ferreira Hospital processing my personal information for care and
+              administration under POPIA.
+            </span>
+          </span>
+        </label>
+
+        <div className="rounded-2xl border border-[#8b8b8b]/30 bg-[#f8f8f8] p-4">
+          <div className="flex items-center gap-3 text-[#1f1f1f]">
             <UploadCloud size={20} />
             <div>
               <p className="font-semibold">Upload documents</p>
-              <p className="text-sm text-slate-500">Add your ID and medical documents to complete registration.</p>
+              <p className="text-sm text-[#8b8b8b]">Add your ID and medical documents to complete registration.</p>
             </div>
           </div>
-          <label className="mt-4 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm font-medium text-slate-500 transition hover:border-teal-500 hover:text-teal-700">
+          <label className="mt-4 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-[#8b8b8b]/40 bg-[#ffffff] px-4 py-6 text-center text-sm font-medium text-[#8b8b8b] transition hover:border-[#8b8b8b]/200 hover:text-[#e41e1f]">
             <input type="file" name="documents" onChange={handleFileChange} multiple className="hidden" />
             Choose files or drag here
           </label>
           {selectedFiles.length > 0 && (
-            <div className="mt-4 rounded-lg bg-white p-4 shadow-sm">
-              <p className="mb-2 text-sm font-semibold text-slate-700">Selected documents</p>
-              <ul className="list-disc space-y-2 pl-5 text-sm text-slate-600">
+            <div className="mt-4 rounded-lg bg-[#ffffff] p-4 shadow-sm">
+              <p className="mb-2 text-sm font-semibold text-[#1f1f1f]">Selected documents</p>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-[#8b8b8b]">
                 {selectedFiles.map((file) => (
                   <li key={file.name}>{file.name}</li>
                 ))}
@@ -201,12 +280,12 @@ function PatientOnboarding() {
             </div>
           )}
           {documents.length > 0 && (
-            <div className="mt-4 rounded-lg bg-slate-50 p-4">
-              <p className="mb-2 text-sm font-semibold text-slate-700">Already uploaded documents</p>
-              <ul className="list-disc space-y-2 pl-5 text-sm text-slate-600">
+            <div className="mt-4 rounded-lg bg-[#f8f8f8] p-4">
+              <p className="mb-2 text-sm font-semibold text-[#1f1f1f]">Already uploaded documents</p>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-[#8b8b8b]">
                 {documents.map((doc, index) => (
                   <li key={`${doc.filename}-${index}`}>
-                    <a target="_blank" rel="noreferrer" href={doc.url} className="text-teal-700 hover:underline">
+                    <a target="_blank" rel="noreferrer" href={doc.url} className="text-[#e41e1f] hover:underline">
                       {doc.originalName}
                     </a>
                   </li>
@@ -220,39 +299,39 @@ function PatientOnboarding() {
   };
 
   return (
-    <main className="min-h-screen bg-blue-50 px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-4xl rounded-3xl bg-white p-6 shadow-xl sm:p-10">
-        <button onClick={() => navigate('/login')} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+    <main className="min-h-screen bg-[#f8f8f8] px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-4xl rounded-3xl bg-[#ffffff] p-6 shadow-xl sm:p-10">
+        <button onClick={() => navigate('/login')} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#8b8b8b] hover:text-[#1f1f1f]">
           <ArrowLeft size={16} /> Back to login
         </button>
 
-        <div className="mb-8 rounded-3xl bg-slate-100 p-6">
-          <p className="text-sm uppercase tracking-[0.24em] text-teal-700">Patient onboarding</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">{phase === 1 ? 'Personal details' : phase === 2 ? 'Medical information' : 'Upload documents'}</h1>
-          <p className="mt-2 text-sm text-slate-600">Complete the {phase === 1 ? 'personal details' : phase === 2 ? 'medical information' : 'document upload'} section to finish your patient registration.</p>
+        <div className="mb-8 rounded-3xl bg-[#f5f5f5] p-6">
+          <p className="text-sm uppercase tracking-[0.24em] text-[#e41e1f]">Patient onboarding</p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-[#1f1f1f]">{step === 1 ? 'Personal details' : step === 2 ? 'Medical information' : 'Documents & consent'}</h1>
+          <p className="mt-2 text-sm text-[#8b8b8b]">Complete the {step === 1 ? 'personal details' : step === 2 ? 'medical information' : 'documents and consent'} section to finish your patient registration.</p>
         </div>
 
-        <PatientOnboardingProgress phase={phase} />
+        <PatientOnboardingProgress step={step} />
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            {renderPhase()}
+          <div className="overflow-hidden rounded-3xl border border-[#8b8b8b]/30 bg-[#ffffff] p-6 shadow-sm">
+            {renderStep()}
           </div>
 
           {status.message && (
-            <p className={`rounded-2xl px-4 py-3 text-sm ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+            <p className={`rounded-2xl px-4 py-3 text-sm ${status.type === 'success' ? 'bg-[#f8f8f8] text-[#e41e1f]' : 'bg-[#f8f8f8] text-[#e41e1f]'}`}>
               {status.message}
             </p>
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-            {phase > 1 && (
-              <button type="button" onClick={() => setPhase((current) => current - 1)} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+            {step > 1 && (
+              <button type="button" onClick={() => setStep((current) => current - 1)} className="rounded-2xl border border-[#8b8b8b]/40 px-4 py-3 text-sm font-semibold text-[#1f1f1f] transition hover:bg-[#f5f5f5]">
                 Back
               </button>
             )}
-            <button type="submit" disabled={isSaving} className="rounded-2xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-teal-400">
-              {phase < 3 ? 'Save and continue' : 'Complete registration'}
+            <button type="submit" disabled={isSaving} className="rounded-2xl bg-[#e41e1f] px-5 py-3 text-sm font-semibold text-[#ffffff] transition hover:bg-[#e41e1f] disabled:cursor-not-allowed disabled:bg-[#8b8b8b]">
+              {step < 3 ? 'Save and continue' : 'Complete registration'}
             </button>
           </div>
         </form>
@@ -263,7 +342,7 @@ function PatientOnboarding() {
 
 function Field({ label, name, type = 'text', value, onChange, disabled }) {
   return (
-    <label className="block text-sm font-semibold text-slate-700">
+    <label className="block text-sm font-semibold text-[#1f1f1f]">
       {label}
       <input
         name={name}
@@ -271,7 +350,7 @@ function Field({ label, name, type = 'text', value, onChange, disabled }) {
         value={value}
         disabled={disabled}
         onChange={onChange}
-        className="mt-1 block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+        className="mt-1 block w-full rounded-2xl border border-[#8b8b8b]/40 bg-[#ffffff] px-4 py-3 text-sm outline-none transition focus:border-[#8b8b8b]/200 focus:ring-2 focus:ring-[#e41e1f]"
       />
     </label>
   );
@@ -279,14 +358,14 @@ function Field({ label, name, type = 'text', value, onChange, disabled }) {
 
 function TextareaField({ label, name, value, onChange, rows = 4 }) {
   return (
-    <label className="block text-sm font-semibold text-slate-700">
+    <label className="block text-sm font-semibold text-[#1f1f1f]">
       {label}
       <textarea
         name={name}
         value={value}
         onChange={onChange}
         rows={rows}
-        className="mt-1 block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+        className="mt-1 block w-full rounded-2xl border border-[#8b8b8b]/40 bg-[#ffffff] px-4 py-3 text-sm outline-none transition focus:border-[#8b8b8b]/200 focus:ring-2 focus:ring-[#e41e1f]"
       />
     </label>
   );
@@ -294,13 +373,13 @@ function TextareaField({ label, name, value, onChange, rows = 4 }) {
 
 function SelectField({ label, name, value, onChange, options }) {
   return (
-    <label className="block text-sm font-semibold text-slate-700">
+    <label className="block text-sm font-semibold text-[#1f1f1f]">
       {label}
       <select
         name={name}
         value={value}
         onChange={onChange}
-        className="mt-1 block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+        className="mt-1 block w-full rounded-2xl border border-[#8b8b8b]/40 bg-[#ffffff] px-4 py-3 text-sm outline-none transition focus:border-[#8b8b8b]/200 focus:ring-2 focus:ring-[#e41e1f]"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

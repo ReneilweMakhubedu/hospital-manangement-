@@ -1,6 +1,7 @@
 import React from 'react';
+import { brand } from '../brand';
 
-const BrandLogo = ({ className = 'h-10 w-10', title = 'ClinicFlow' }) => (
+const BrandLogo = ({ className = 'h-10 w-10', title = brand.shortName }) => (
   <svg
     className={className}
     viewBox="0 0 48 48"
@@ -9,7 +10,7 @@ const BrandLogo = ({ className = 'h-10 w-10', title = 'ClinicFlow' }) => (
     role="img"
     aria-label={title}
   >
-    <rect width="48" height="48" rx="14" fill="url(#clinicflow-gradient)" />
+    <rect width="48" height="48" rx="14" fill="url(#rfh-hms-gradient)" />
     <path
       d="M24 11.5V36.5M11.5 24H36.5"
       stroke="white"
@@ -24,9 +25,9 @@ const BrandLogo = ({ className = 'h-10 w-10', title = 'ClinicFlow' }) => (
       strokeLinejoin="round"
     />
     <defs>
-      <linearGradient id="clinicflow-gradient" x1="7" y1="5" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <linearGradient id="rfh-hms-gradient" x1="7" y1="5" x2="42" y2="44" gradientUnits="userSpaceOnUse">
         <stop stopColor="#0F766E" />
-        <stop offset="1" stopColor="#2563EB" />
+        <stop offset="1" stopColor="#1E3A5F" />
       </linearGradient>
     </defs>
   </svg>
