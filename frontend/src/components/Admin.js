@@ -1,257 +1,166 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
+  Building2,
+  ChartBar,
+  HeartPulse,
   LayoutDashboard,
-  Users,
-  UserPlus,
-  Calendar,
-  Clock3,
-  Pill,
-  MessageSquare,
-  FileBarChart,
-  Settings,
-  Stethoscope,
   LogOut,
-} from "lucide-react";
+  Settings,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import { asiphileniPillars, brand } from '../brand';
+import { portalChrome as ui } from '../theme';
 
-const modules = [
-  {
-    title: "Digital Reception",
-    description: "Register patients, digital check-in and queue generation.",
-    icon: <UserPlus size={40} className="text-teal-600" />,
-    route: "/reception",
-  },
-  {
-    title: "Patient Management",
-    description: "Electronic patient records and medical history.",
-    icon: <Users size={40} className="text-teal-600" />,
-    route: "/patient",
-  },
-  {
-    title: "Healthcare Staff",
-    description: "Manage doctors, nurses and reception staff.",
-    icon: <Stethoscope size={40} className="text-teal-600" />,
-    route: "/doctor",
-  },
-  {
-    title: "Appointment Scheduling",
-    description: "Book and approve clinic appointments.",
-    icon: <Calendar size={40} className="text-teal-600" />,
-    route: "/appointments",
-  },
-  {
-    title: "Smart Queue",
-    description: "Monitor waiting patients and now serving.",
-    icon: <Clock3 size={40} className="text-teal-600" />,
-    route: "/queue",
-  },
-  {
-    title: "Pharmacy",
-    description: "Medication dispensing and stock management.",
-    icon: <Pill size={40} className="text-teal-600" />,
-    route: "/pharmacy",
-  },
-  {
-    title: "Staff Chat",
-    description: "Internal communication between clinic staff.",
-    icon: <MessageSquare size={40} className="text-teal-600" />,
-    route: "/chat",
-  },
-  {
-    title: "Reports",
-    description: "Clinic reports, statistics and analytics.",
-    icon: <FileBarChart size={40} className="text-teal-600" />,
-    route: "/reports",
-  },
-];
+const pillarIcons = {
+  infrastructure: Building2,
+  hr: Users,
+  finance: Wallet,
+  patient: HeartPulse,
+  monitoring: ChartBar,
+};
 
 export default function Admin() {
   const navigate = useNavigate();
+  const [activePillar, setActivePillar] = useState('hr');
+
+  const pillar = asiphileniPillars.find((p) => p.id === activePillar) || asiphileniPillars[0];
+  const PillarIcon = pillarIcons[pillar.id] || LayoutDashboard;
+
+  const moduleTotal = asiphileniPillars.reduce((n, p) => n + p.modules.length, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-blue-950 flex">
-
-      {/* Sidebar */}
-      <div className="w-72 bg-gradient-to-b from-slate-950 via-teal-950 to-blue-950 text-white shadow-xl">
-
-        <div className="p-6 border-b border-teal-600 [&>h1]:hidden">
+    <div className={ui.page}>
+      <aside className={`${ui.asideStatic} min-h-screen`}>
+        <div className={ui.brandBlock}>
           <div className="flex items-center gap-3">
             <BrandLogo className="h-12 w-12 shrink-0" />
-            <h2 className="text-3xl font-bold">PMS</h2>
+            <div>
+              <h2 className={ui.brandTitle}>{brand.shortName}</h2>
+              <p className={ui.brandPortal}>{brand.hospital}</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold">🏥 PMS</h1>
-          <p className="text-sm mt-2 text-teal-100">
-            Digital Clinic Operations Platform
-          </p>
+          <p className="mt-3 text-xs font-medium text-[#8b8b8b]">{brand.programmeLabel}</p>
         </div>
 
-        <nav className="mt-6">
+        <nav className="mt-4 space-y-1 px-2 pb-8">
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#e41e1f]">
+            Turnaround pillars
+          </p>
 
-          <button className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600">
-            <LayoutDashboard />
-            Dashboard
+          {asiphileniPillars.map((p) => {
+            const Icon = pillarIcons[p.id] || LayoutDashboard;
+            const isActive = activePillar === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setActivePillar(p.id)}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition ${
+                  isActive ? ui.navActive : ui.navIdle
+                }`}
+              >
+                <Icon size={20} />
+                <span className="text-sm font-medium">{p.shortTitle}</span>
+              </button>
+            );
+          })}
+
+          <div className="my-4 border-t border-[#8b8b8b]/25" />
+
+          <button type="button" onClick={() => navigate('/dashboard')} className={ui.footerLink}>
+            <LayoutDashboard size={20} />
+            Operations dashboard
           </button>
 
-          <button
-            onClick={() => navigate("/reception")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <UserPlus />
-            Digital Reception
-          </button>
-
-          <button
-            onClick={() => navigate("/patient")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <Users />
-            Patients
-          </button>
-
-          <button
-            onClick={() => navigate("/doctor")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <Stethoscope />
-            Healthcare Staff
-          </button>
-
-          <button
-            onClick={() => navigate("/appointments")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <Calendar />
-            Appointments
-          </button>
-
-          <button
-            onClick={() => navigate("/queue")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <Clock3 />
-            Smart Queue
-          </button>
-
-          <button
-            onClick={() => navigate("/pharmacy")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <Pill />
-            Pharmacy
-          </button>
-
-          <button
-            onClick={() => navigate("/chat")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <MessageSquare />
-            Staff Chat
-          </button>
-
-          <button
-            onClick={() => navigate("/reports")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600"
-          >
-            <FileBarChart />
-            Reports
-          </button>
-
-          <button className="flex items-center gap-3 w-full px-6 py-4 hover:bg-teal-600">
-            <Settings />
+          <button type="button" onClick={() => navigate('/settings')} className={ui.footerLink}>
+            <Settings size={20} />
             Settings
           </button>
 
           <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-3 w-full px-6 py-4 hover:bg-red-600 mt-8"
+            type="button"
+            onClick={() => {
+              localStorage.clear();
+              navigate('/');
+            }}
+            className={`${ui.logout} mt-4`}
           >
-            <LogOut />
+            <LogOut size={20} />
             Logout
           </button>
-
         </nav>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 p-10">
-
-        <div className="rounded-xl border border-teal-200/15 bg-slate-900/70 p-8 text-white shadow-xl shadow-slate-950/30 backdrop-blur-sm mb-8">
-
-          <h1 className="text-4xl font-bold text-white">
-            PMS Dashboard
+      <main className="flex-1 overflow-y-auto p-8 lg:p-10">
+        <div className="mb-8 rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-8 shadow-sm">
+          <p className={ui.eyebrow}>Administration</p>
+          <h1 className="mt-2 text-3xl font-bold text-[#1f1f1f] sm:text-4xl">
+            {brand.shortName} command centre
           </h1>
-
-          <p className="text-teal-100/80 mt-3 text-lg">
-            Digital Clinic Operations Platform
+          <p className="mt-3 max-w-2xl text-lg text-[#8b8b8b]">
+            Modules are organised by {brand.programme} so infrastructure, HR, finance, patient
+            experience, and monitoring stay aligned with provincial priorities.
           </p>
-
-          <p className="text-teal-300 font-semibold mt-2">
-            Replacing Paper. Reducing Queues. Improving Patient Care.
-          </p>
-
         </div>
 
-        {/* Statistics */}
-        <div className="grid md:grid-cols-4 gap-6 mb-10">
-
-          <div className="rounded-xl border border-teal-200/15 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30 backdrop-blur-sm">
-            <h3 className="text-teal-100/75">Registered Patients</h3>
-            <p className="text-4xl font-bold text-teal-300">1,254</p>
+        <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-5 shadow-sm">
+            <h3 className="text-sm text-[#8b8b8b]">Modules</h3>
+            <p className="mt-1 text-3xl font-bold text-[#e41e1f]">{moduleTotal}</p>
           </div>
-
-          <div className="rounded-xl border border-teal-200/15 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30 backdrop-blur-sm">
-            <h3 className="text-teal-100/75">Today's Appointments</h3>
-            <p className="text-4xl font-bold text-cyan-300">57</p>
+          <div className="rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-5 shadow-sm">
+            <h3 className="text-sm text-[#8b8b8b]">Programme pillars</h3>
+            <p className="mt-1 text-3xl font-bold text-[#e41e1f]">{asiphileniPillars.length}</p>
           </div>
-
-          <div className="rounded-xl border border-teal-200/15 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30 backdrop-blur-sm">
-            <h3 className="text-teal-100/75">Patients Waiting</h3>
-            <p className="text-4xl font-bold text-amber-300">19</p>
+          <div className="rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-5 shadow-sm">
+            <h3 className="text-sm text-[#8b8b8b]">Facility</h3>
+            <p className="mt-1 text-lg font-bold text-[#1f1f1f]">Tertiary · Mbombela</p>
           </div>
-
-          <div className="rounded-xl border border-teal-200/15 bg-slate-900/70 p-6 shadow-lg shadow-slate-950/30 backdrop-blur-sm">
-            <h3 className="text-teal-100/75">Doctors On Duty</h3>
-            <p className="text-4xl font-bold text-emerald-300">12</p>
-          </div>
-
         </div>
 
-        {/* Modules */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-          {modules.map((module, index) => (
-
-            <div
-              key={index}
-              className="rounded-xl border border-teal-200/15 bg-slate-900/70 p-6 text-white shadow-lg shadow-slate-950/30 backdrop-blur-sm transition hover:-translate-y-1 hover:bg-slate-800/80 hover:shadow-xl"
-            >
-
-              {module.icon}
-
-              <h2 className="text-xl font-bold mt-4">
-                {module.title}
-              </h2>
-
-              <p className="text-teal-100/75 mt-2">
-                {module.description}
-              </p>
-
-              <button
-                onClick={() => navigate(module.route)}
-                className="mt-6 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg w-full"
-              >
-                Open Module
-              </button>
-
+        <section className="rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-8 shadow-sm">
+          <div className="mb-6 flex items-start gap-4">
+            <div className="rounded-lg bg-[#f8f8f8] p-3">
+              <PillarIcon className="h-8 w-8 text-[#e41e1f]" />
             </div>
+            <div>
+              <h2 className="text-2xl font-bold text-[#1f1f1f]">{pillar.title}</h2>
+              <p className="mt-2 max-w-2xl text-[#8b8b8b]">{pillar.description}</p>
+            </div>
+          </div>
 
-          ))}
-
-        </div>
-
-      </div>
-
+          {pillar.modules.length > 0 ? (
+            <div>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#e41e1f]">
+                Modules
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pillar.modules.map((module) => (
+                  <div
+                    key={module.route}
+                    className="rounded-xl border border-[#8b8b8b]/30 bg-[#f5f5f5] p-5 transition hover:border-[#8b8b8b]/40"
+                  >
+                    <h4 className="font-bold text-[#1f1f1f]">{module.title}</h4>
+                    <p className="mt-2 text-sm text-[#8b8b8b]">{module.description}</p>
+                    <button
+                      type="button"
+                      onClick={() => navigate(module.route)}
+                      className="mt-4 w-full rounded-lg bg-[#e41e1f] px-4 py-2 text-sm font-semibold text-[#ffffff] hover:bg-[#e41e1f]"
+                    >
+                      Open module
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[#8b8b8b]">No modules listed for this pillar.</p>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

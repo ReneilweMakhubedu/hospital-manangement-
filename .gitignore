@@ -7,8 +7,12 @@ frontend/build/
 frontend/.env
 frontend/.env.local
 
-backend/.env
-backend/uploads/
+backend-java/.env
+backend-java/data/
+backend-java/uploads/
+backend-java/target/
+backend-java-run.log
+backend-java-run.err
 
 npm-debug.log*
 yarn-debug.log*

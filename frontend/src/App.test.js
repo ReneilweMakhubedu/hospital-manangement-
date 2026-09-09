@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders the PMS home page', () => {
+test('renders the Rob Ferreira HMS home page', () => {
   render(<App />);
-  expect(screen.getAllByText(/PMS/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Rob Ferreira/i).length).toBeGreaterThan(0);
 });
