@@ -43,7 +43,10 @@ public class AuthService {
 			throw new ApiException(400, "Email and password are required");
 		}
 
-		List<String> order = new ArrayList<>(List.of("admin", "hr", "finance", "payroll", "procurement", "pharmacy", "doctor", "patient"));
+		List<String> order = new ArrayList<>(List.of(
+				"admin", "hr", "finance", "payroll", "procurement", "pharmacy",
+				"nurse", "nurse_manager", "casualty", "lab", "radiology", "facilities", "allied",
+				"doctor", "patient"));
 		String requestedRole = role == null ? "" : role.trim().toLowerCase();
 		if ("super_admin".equals(requestedRole)) {
 			requestedRole = "admin";
@@ -138,6 +141,10 @@ public class AuthService {
 			case "pharmacy" -> adminRepository.findByEmailIgnoreCase(email)
 					.filter(a -> "pharmacy".equalsIgnoreCase(a.getRole()))
 					.map(a -> new AuthCandidate(a.getId(), a.getPassword(), "pharmacy", null));
+			case "nurse", "nurse_manager", "casualty", "lab", "radiology", "facilities", "allied" ->
+					adminRepository.findByEmailIgnoreCase(email)
+							.filter(a -> role.equalsIgnoreCase(a.getRole()))
+							.map(a -> new AuthCandidate(a.getId(), a.getPassword(), role, null));
 			default -> Optional.empty();
 		};
 	}

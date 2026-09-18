@@ -35,6 +35,12 @@ export const asiphileniPillars = [
       'Facilities maintenance, medical equipment lifecycle, and theatre capacity for Level 2/3 services.',
     modules: [
       {
+        title: 'Facilities operations',
+        description: 'Maintenance work orders, response priorities, and hospital asset condition.',
+        route: '/facilities',
+        status: 'live',
+      },
+      {
         title: 'Pharmacy command centre',
         description:
           'Operations queue, clinical quality, finance, inventory & supply, and dispense desk.',
@@ -201,6 +207,11 @@ export const asiphileniPillars = [
     description:
       'Registration, EMR, appointments, queues, referrals, waiting lists, and complaint timelines.',
     modules: [
+      { title: 'Nursing portal', description: 'Beds, observations, medication administration, and handovers.', route: '/nursing', status: 'live' },
+      { title: 'Casualty portal', description: 'Emergency triage, acuity, and casualty visit flow.', route: '/casualty', status: 'live' },
+      { title: 'Laboratory portal', description: 'Specimen orders, processing, and diagnostic results.', route: '/lab', status: 'live' },
+      { title: 'Radiology portal', description: 'Imaging orders, scheduling, studies, and reports.', route: '/radiology', status: 'live' },
+      { title: 'Allied health portal', description: 'Multidisciplinary referrals and care progress.', route: '/allied', status: 'live' },
       { title: 'Digital reception', description: 'Check-in and visit start.', route: '/reception', status: 'live' },
       { title: 'Patients', description: 'Electronic patient records.', route: '/patients', status: 'live' },
       { title: 'Appointments', description: 'Scheduling and bookings.', route: '/appointments', status: 'live' },

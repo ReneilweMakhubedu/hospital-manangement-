@@ -1,12 +1,10 @@
 package za.gov.mpumalanga.rfh.controller;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,12 +25,11 @@ import za.gov.mpumalanga.rfh.repository.PrescriptionRepository;
 import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
+import za.gov.mpumalanga.rfh.service.AssistService;
 
 @RestController
 @RequestMapping("/api/doctor/consult")
 public class DoctorConsultController {
-
-	private static final Pattern SENTENCE_SPLIT = Pattern.compile("(?<=[.!?])\\s+");
 
 	private final UserRepository userRepository;
 	private final ClinicalNoteRepository clinicalNoteRepository;
@@ -41,6 +38,7 @@ public class DoctorConsultController {
 	private final AppointmentRepository appointmentRepository;
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
+	private final AssistService assistService;
 
 	public DoctorConsultController(
 			UserRepository userRepository,
@@ -49,7 +47,8 @@ public class DoctorConsultController {
 			LabResultRepository labResultRepository,
 			AppointmentRepository appointmentRepository,
 			ResponseMapper responseMapper,
-			SecurityUtils securityUtils) {
+			SecurityUtils securityUtils,
+			AssistService assistService) {
 		this.userRepository = userRepository;
 		this.clinicalNoteRepository = clinicalNoteRepository;
 		this.prescriptionRepository = prescriptionRepository;
@@ -57,6 +56,7 @@ public class DoctorConsultController {
 		this.appointmentRepository = appointmentRepository;
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
+		this.assistService = assistService;
 	}
 
 	@GetMapping("/patient/{patientId}")
@@ -185,47 +185,7 @@ public class DoctorConsultController {
 		if (transcript == null || transcript.isBlank()) {
 			transcript = str(body.get("spokenText"));
 		}
-		if (transcript == null || transcript.isBlank()) {
-			throw new ApiException(400, "transcript or spokenText is required");
-		}
-
-		List<String> sentences = splitSentences(transcript.trim());
-		List<String> subjective = new ArrayList<>();
-		List<String> objective = new ArrayList<>();
-		List<String> assessment = new ArrayList<>();
-		List<String> plan = new ArrayList<>();
-
-		for (String sentence : sentences) {
-			String lower = sentence.toLowerCase(Locale.ROOT);
-			if (containsAny(lower, "plan", "prescribe", "follow-up", "follow up", "refer", "return", "advise")) {
-				plan.add(sentence);
-			} else if (containsAny(lower, "diagnos", "impression", "likely", "suspect", "assessment")) {
-				assessment.add(sentence);
-			} else if (containsAny(lower, "bp", "pulse", "temp", "exam", "vitals", "lab", "x-ray", "oxygen", "weight")) {
-				objective.add(sentence);
-			} else {
-				subjective.add(sentence);
-			}
-		}
-
-		if (subjective.isEmpty() && !sentences.isEmpty()) {
-			subjective.add(sentences.get(0));
-		}
-
-		String subjectiveText = joinOrDefault(subjective, "Patient history captured from spoken draft.");
-		String objectiveText = joinOrDefault(objective, "Objective findings to be completed.");
-		String assessmentText = joinOrDefault(assessment, "Assessment to be confirmed by clinician.");
-		String planText = joinOrDefault(plan, "Plan to be completed by clinician.");
-
-		Map<String, Object> draft = new LinkedHashMap<>();
-		draft.put("draftAssistant", true);
-		draft.put("label", "Clinical note assistant (draft)");
-		draft.put("subjective", subjectiveText);
-		draft.put("objective", objectiveText);
-		draft.put("assessment", assessmentText);
-		draft.put("plan", planText);
-		draft.put("summary", subjectiveText + " " + assessmentText);
-		return draft;
+		return assistService.draftSoap(transcript);
 	}
 
 	private String resolveTriageFlag(User patient, List<Appointment> appointments) {
@@ -248,18 +208,6 @@ public class DoctorConsultController {
 		return "GREEN";
 	}
 
-	private static List<String> splitSentences(String text) {
-		String[] parts = SENTENCE_SPLIT.split(text);
-		List<String> sentences = new ArrayList<>();
-		for (String part : parts) {
-			String trimmed = part.trim();
-			if (!trimmed.isEmpty()) {
-				sentences.add(trimmed);
-			}
-		}
-		return sentences;
-	}
-
 	private static boolean containsAny(String haystack, String... needles) {
 		for (String needle : needles) {
 			if (haystack.contains(needle)) {
@@ -267,13 +215,6 @@ public class DoctorConsultController {
 			}
 		}
 		return false;
-	}
-
-	private static String joinOrDefault(List<String> parts, String fallback) {
-		if (parts.isEmpty()) {
-			return fallback;
-		}
-		return String.join(" ", parts);
 	}
 
 	private static String nullToEmpty(String value) {

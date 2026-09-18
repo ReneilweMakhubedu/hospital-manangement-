@@ -63,6 +63,16 @@ import za.gov.mpumalanga.rfh.entity.TrainingEnrolment;
 import za.gov.mpumalanga.rfh.entity.User;
 import za.gov.mpumalanga.rfh.entity.Vacancy;
 import za.gov.mpumalanga.rfh.entity.Vendor;
+import za.gov.mpumalanga.rfh.entity.AlliedReferral;
+import za.gov.mpumalanga.rfh.entity.BiomedAsset;
+import za.gov.mpumalanga.rfh.entity.EdVisit;
+import za.gov.mpumalanga.rfh.entity.FacilityWorkOrder;
+import za.gov.mpumalanga.rfh.entity.ImagingOrder;
+import za.gov.mpumalanga.rfh.entity.LabOrder;
+import za.gov.mpumalanga.rfh.entity.NursingHandover;
+import za.gov.mpumalanga.rfh.entity.NursingMedAdmin;
+import za.gov.mpumalanga.rfh.entity.NursingVital;
+import za.gov.mpumalanga.rfh.entity.WardBed;
 import za.gov.mpumalanga.rfh.repository.AdminRepository;
 import za.gov.mpumalanga.rfh.repository.AuditEventRepository;
 import za.gov.mpumalanga.rfh.repository.BudgetForecastRepository;
@@ -117,6 +127,7 @@ import za.gov.mpumalanga.rfh.repository.TrainingEnrolmentRepository;
 import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.repository.VacancyRepository;
 import za.gov.mpumalanga.rfh.repository.VendorRepository;
+import za.gov.mpumalanga.rfh.repository.SupportStore;
 
 @Component
 public class DataSeeder implements ApplicationRunner {
@@ -174,6 +185,7 @@ public class DataSeeder implements ApplicationRunner {
 	private final PharmacyClinicalInterventionRepository pharmacyClinicalInterventionRepository;
 	private final PharmacyFinancePeriodRepository pharmacyFinancePeriodRepository;
 	private final PharmacySupplierScoreRepository pharmacySupplierScoreRepository;
+	private final SupportStore supportStore;
 	private final PasswordEncoder passwordEncoder;
 
 	public DataSeeder(
@@ -230,6 +242,7 @@ public class DataSeeder implements ApplicationRunner {
 			PharmacyClinicalInterventionRepository pharmacyClinicalInterventionRepository,
 			PharmacyFinancePeriodRepository pharmacyFinancePeriodRepository,
 			PharmacySupplierScoreRepository pharmacySupplierScoreRepository,
+			SupportStore supportStore,
 			PasswordEncoder passwordEncoder) {
 		this.adminRepository = adminRepository;
 		this.medicineRepository = medicineRepository;
@@ -284,6 +297,7 @@ public class DataSeeder implements ApplicationRunner {
 		this.pharmacyClinicalInterventionRepository = pharmacyClinicalInterventionRepository;
 		this.pharmacyFinancePeriodRepository = pharmacyFinancePeriodRepository;
 		this.pharmacySupplierScoreRepository = pharmacySupplierScoreRepository;
+		this.supportStore = supportStore;
 		this.passwordEncoder = passwordEncoder;
 	}
 
@@ -358,6 +372,21 @@ public class DataSeeder implements ApplicationRunner {
 			pharmacy.setRole("pharmacy");
 			adminRepository.save(pharmacy);
 		}
+
+		seedStaffLogin("Nursing", "Professional Nurse", "nurse@rfh.gov.za", "Nurse123!", "nurse");
+		seedStaffLogin("Nursing", "Unit Manager", "nursemanager@rfh.gov.za", "NurseManager123!", "nurse_manager");
+		seedStaffLogin("Emergency", "Casualty", "casualty@rfh.gov.za", "Casualty123!", "casualty");
+		seedStaffLogin("Diagnostic", "Laboratory", "lab@rfh.gov.za", "Lab123!", "lab");
+		seedStaffLogin("Diagnostic", "Radiology", "radiology@rfh.gov.za", "Radiology123!", "radiology");
+		seedStaffLogin("Hospital", "Facilities", "facilities@rfh.gov.za", "Facilities123!", "facilities");
+		seedStaffLogin("Allied", "Health", "allied@rfh.gov.za", "Allied123!", "allied");
+
+		seedNursingModule();
+		seedCasualtyModule();
+		seedLabModule();
+		seedRadiologyModule();
+		seedFacilitiesModule();
+		seedAlliedModule();
 
 		if (heroSlideRepository.count() == 0) {
 			seedHeroSlide(
@@ -2237,6 +2266,137 @@ public class DataSeeder implements ApplicationRunner {
 		event.setCreatedAt(createdAt);
 		procLedgerEventRepository.save(event);
 		return payloadHash;
+	}
+
+	private void seedStaffLogin(String firstName, String lastName, String email, String password, String role) {
+		if (adminRepository.findByEmailIgnoreCase(email).isPresent()) {
+			return;
+		}
+		Admin user = new Admin();
+		user.setFirstName(firstName);
+		user.setLastName(lastName);
+		user.setEmail(email);
+		user.setPassword(passwordEncoder.encode(password));
+		user.setRole(role);
+		adminRepository.save(user);
+	}
+
+	private void seedNursingModule() {
+		if (supportStore.count(WardBed.class) == 0) {
+			WardBed a = new WardBed();
+			a.wardName = "Medical Ward A"; a.bedNumber = "A-01"; a.status = "OCCUPIED";
+			a.patientName = "Nomsa Mthembu"; a.patientId = 1001L; a.acuity = "HIGH";
+			a.admittedAt = Instant.now().minus(18, ChronoUnit.HOURS); supportStore.save(a);
+			WardBed b = new WardBed();
+			b.wardName = "Medical Ward A"; b.bedNumber = "A-02"; b.status = "AVAILABLE"; b.acuity = "LOW";
+			supportStore.save(b);
+			WardBed c = new WardBed();
+			c.wardName = "Surgical Ward B"; c.bedNumber = "B-07"; c.status = "CLEANING"; c.acuity = "MEDIUM";
+			supportStore.save(c);
+		}
+		if (supportStore.count(NursingHandover.class) == 0) {
+			NursingHandover h = new NursingHandover();
+			h.wardName = "Medical Ward A"; h.shift = "DAY";
+			h.summary = "High-acuity patient in A-01 requires hourly observations and oxygen review.";
+			h.createdByEmail = "nursemanager@rfh.gov.za"; h.createdAt = Instant.now().minus(2, ChronoUnit.HOURS);
+			supportStore.save(h);
+		}
+		if (supportStore.count(NursingVital.class) == 0) {
+			NursingVital v = new NursingVital();
+			v.bedId = 1L; v.patientName = "Nomsa Mthembu"; v.bpSystolic = 148; v.bpDiastolic = 92;
+			v.pulse = 104; v.tempC = 37.8; v.spo2 = 93; v.recordedByEmail = "nurse@rfh.gov.za";
+			v.recordedAt = Instant.now().minus(45, ChronoUnit.MINUTES); supportStore.save(v);
+		}
+		if (supportStore.count(NursingMedAdmin.class) == 0) {
+			NursingMedAdmin m = new NursingMedAdmin();
+			m.patientName = "Nomsa Mthembu"; m.medication = "Ceftriaxone"; m.dose = "1 g";
+			m.route = "IV"; m.status = "GIVEN"; m.givenAt = Instant.now().minus(1, ChronoUnit.HOURS);
+			m.nurseEmail = "nurse@rfh.gov.za"; supportStore.save(m);
+			NursingMedAdmin due = new NursingMedAdmin();
+			due.patientName = "Nomsa Mthembu"; due.medication = "Paracetamol"; due.dose = "1 g";
+			due.route = "PO"; due.status = "HELD"; due.nurseEmail = "nurse@rfh.gov.za"; supportStore.save(due);
+		}
+	}
+
+	private void seedCasualtyModule() {
+		if (supportStore.count(EdVisit.class) != 0) return;
+		EdVisit red = new EdVisit();
+		red.ticketNumber = "ED-RFH-1001"; red.patientName = "Sibusiso Nkosi"; red.triageCategory = "RED";
+		red.chiefComplaint = "Chest pain with diaphoresis"; red.status = "IN_TREATMENT";
+		red.arrivedAt = Instant.now().minus(24, ChronoUnit.MINUTES); red.triageAt = Instant.now().minus(20, ChronoUnit.MINUTES);
+		supportStore.save(red);
+		EdVisit green = new EdVisit();
+		green.ticketNumber = "ED-RFH-1002"; green.patientName = "Lindiwe Mashego"; green.triageCategory = "GREEN";
+		green.chiefComplaint = "Minor ankle injury"; green.status = "WAITING";
+		green.arrivedAt = Instant.now().minus(52, ChronoUnit.MINUTES); supportStore.save(green);
+		EdVisit boarded = new EdVisit();
+		boarded.ticketNumber = "ED-RFH-0998"; boarded.patientName = "Petrus Mokoena"; boarded.triageCategory = "ORANGE";
+		boarded.chiefComplaint = "Shortness of breath"; boarded.status = "ADMITTED"; boarded.disposition = "Boarded awaiting medical bed";
+		boarded.arrivedAt = Instant.now().minus(7, ChronoUnit.HOURS); boarded.triageAt = Instant.now().minus(6, ChronoUnit.HOURS);
+		supportStore.save(boarded);
+	}
+
+	private void seedLabModule() {
+		if (supportStore.count(LabOrder.class) != 0) return;
+		LabOrder stat = new LabOrder();
+		stat.accessionNumber = "NHLS-RFH-260901"; stat.patientName = "Sibusiso Nkosi"; stat.testName = "Troponin I";
+		stat.priority = "STAT"; stat.status = "IN_PROGRESS"; stat.orderedAt = Instant.now().minus(35, ChronoUnit.MINUTES);
+		stat.orderedBy = "doctor@rfh.gov.za"; supportStore.save(stat);
+		LabOrder done = new LabOrder();
+		done.accessionNumber = "NHLS-RFH-260897"; done.patientName = "Nomsa Mthembu"; done.testName = "Full blood count";
+		done.priority = "ROUTINE"; done.status = "RESULTED"; done.orderedAt = Instant.now().minus(5, ChronoUnit.HOURS);
+		done.resultedAt = Instant.now().minus(2, ChronoUnit.HOURS); done.resultSummary = "Mild leukocytosis";
+		done.orderedBy = "doctor@rfh.gov.za"; supportStore.save(done);
+	}
+
+	private void seedRadiologyModule() {
+		if (supportStore.count(ImagingOrder.class) != 0) return;
+		ImagingOrder ct = new ImagingOrder();
+		ct.accessionNumber = "RAD-RFH-260301"; ct.patientName = "Sibusiso Nkosi"; ct.modality = "CT";
+		ct.studyName = "CT pulmonary angiogram"; ct.priority = "STAT"; ct.status = "SCHEDULED";
+		ct.orderedAt = Instant.now().minus(50, ChronoUnit.MINUTES); supportStore.save(ct);
+		ImagingOrder xray = new ImagingOrder();
+		xray.accessionNumber = "RAD-RFH-260296"; xray.patientName = "Nomsa Mthembu"; xray.modality = "XRAY";
+		xray.studyName = "Portable chest X-ray"; xray.priority = "ROUTINE"; xray.status = "REPORTED";
+		xray.orderedAt = Instant.now().minus(4, ChronoUnit.HOURS); xray.reportedAt = Instant.now().minus(2, ChronoUnit.HOURS);
+		xray.reportSummary = "Bibasal atelectatic change; no focal consolidation."; supportStore.save(xray);
+	}
+
+	private void seedFacilitiesModule() {
+		if (supportStore.count(FacilityWorkOrder.class) == 0) {
+			FacilityWorkOrder work = new FacilityWorkOrder();
+			work.referenceNumber = "FM-RFH-2026-041"; work.category = "HVAC";
+			work.title = "Casualty resus air-conditioning failure"; work.location = "Casualty Resus Bay";
+			work.priority = "CRITICAL"; work.status = "IN_PROGRESS"; work.createdAt = Instant.now().minus(8, ChronoUnit.HOURS);
+			supportStore.save(work);
+			FacilityWorkOrder biomed = new FacilityWorkOrder();
+			biomed.referenceNumber = "BM-RFH-2026-118"; biomed.category = "BIOMED";
+			biomed.title = "Infusion pump fails self-test"; biomed.location = "Medical Ward A";
+			biomed.priority = "HIGH"; biomed.status = "OPEN"; biomed.assetTag = "RFH-INF-0042";
+			biomed.createdAt = Instant.now().minus(1, ChronoUnit.DAYS); supportStore.save(biomed);
+		}
+		if (supportStore.count(BiomedAsset.class) == 0) {
+			BiomedAsset pump = new BiomedAsset();
+			pump.assetTag = "RFH-INF-0042"; pump.name = "Volumetric infusion pump"; pump.location = "Biomedical workshop";
+			pump.status = "DOWN"; pump.nextPmDate = LocalDate.now().minusDays(12); supportStore.save(pump);
+			BiomedAsset monitor = new BiomedAsset();
+			monitor.assetTag = "RFH-MON-0017"; monitor.name = "Multiparameter patient monitor"; monitor.location = "Casualty Resus Bay";
+			monitor.status = "IN_SERVICE"; monitor.nextPmDate = LocalDate.now().plusDays(18); supportStore.save(monitor);
+		}
+	}
+
+	private void seedAlliedModule() {
+		if (supportStore.count(AlliedReferral.class) != 0) return;
+		AlliedReferral physio = new AlliedReferral();
+		physio.patientName = "Nomsa Mthembu"; physio.discipline = "PHYSIO";
+		physio.reason = "Early mobilisation following prolonged admission"; physio.status = "ACTIVE";
+		physio.referredBy = "doctor@rfh.gov.za"; physio.createdAt = Instant.now().minus(2, ChronoUnit.DAYS);
+		physio.notes = "Assess mobility and provide chest physiotherapy."; supportStore.save(physio);
+		AlliedReferral social = new AlliedReferral();
+		social.patientName = "Petrus Mokoena"; social.discipline = "SOCIAL_WORK";
+		social.reason = "Discharge planning and family support"; social.status = "NEW";
+		social.referredBy = "nursemanager@rfh.gov.za"; social.createdAt = Instant.now().minus(5, ChronoUnit.HOURS);
+		supportStore.save(social);
 	}
 }
 

@@ -2,6 +2,18 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Department portal accounts
+
+| Department | Role | Login email | Password | Portal home |
+| --- | --- | --- | --- | --- |
+| Nursing | `nurse` | `nurse@rfh.gov.za` | `Nurse123!` | `/nursing` |
+| Nursing management | `nurse_manager` | `nursemanager@rfh.gov.za` | `NurseManager123!` | `/nursing` |
+| Casualty | `casualty` | `casualty@rfh.gov.za` | `Casualty123!` | `/casualty` |
+| Laboratory | `lab` | `lab@rfh.gov.za` | `Lab123!` | `/lab` |
+| Radiology | `radiology` | `radiology@rfh.gov.za` | `Radiology123!` | `/radiology` |
+| Facilities | `facilities` | `facilities@rfh.gov.za` | `Facilities123!` | `/facilities` |
+| Allied health | `allied` | `allied@rfh.gov.za` | `Allied123!` | `/allied` |
+
 ## Available Scripts
 
 In the project directory, you can run:

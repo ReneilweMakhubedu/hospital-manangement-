@@ -352,6 +352,41 @@ public class AdminController {
 		}
 	}
 
+	@GetMapping("/nurse-users")
+	public List<Map<String, Object>> listNurseUsers() { return listStaffRole("nurse"); }
+	@PostMapping("/add-nurse")
+	public ResponseEntity<Map<String, Object>> addNurse(@RequestBody Map<String, Object> body) { return addStaffRole(body, "nurse"); }
+
+	@GetMapping("/nurse-manager-users")
+	public List<Map<String, Object>> listNurseManagerUsers() { return listStaffRole("nurse_manager"); }
+	@PostMapping("/add-nurse-manager")
+	public ResponseEntity<Map<String, Object>> addNurseManager(@RequestBody Map<String, Object> body) { return addStaffRole(body, "nurse_manager"); }
+
+	@GetMapping("/casualty-users")
+	public List<Map<String, Object>> listCasualtyUsers() { return listStaffRole("casualty"); }
+	@PostMapping("/add-casualty")
+	public ResponseEntity<Map<String, Object>> addCasualty(@RequestBody Map<String, Object> body) { return addStaffRole(body, "casualty"); }
+
+	@GetMapping("/lab-users")
+	public List<Map<String, Object>> listLabUsers() { return listStaffRole("lab"); }
+	@PostMapping("/add-lab")
+	public ResponseEntity<Map<String, Object>> addLab(@RequestBody Map<String, Object> body) { return addStaffRole(body, "lab"); }
+
+	@GetMapping("/radiology-users")
+	public List<Map<String, Object>> listRadiologyUsers() { return listStaffRole("radiology"); }
+	@PostMapping("/add-radiology")
+	public ResponseEntity<Map<String, Object>> addRadiology(@RequestBody Map<String, Object> body) { return addStaffRole(body, "radiology"); }
+
+	@GetMapping("/facilities-users")
+	public List<Map<String, Object>> listFacilitiesUsers() { return listStaffRole("facilities"); }
+	@PostMapping("/add-facilities")
+	public ResponseEntity<Map<String, Object>> addFacilities(@RequestBody Map<String, Object> body) { return addStaffRole(body, "facilities"); }
+
+	@GetMapping("/allied-users")
+	public List<Map<String, Object>> listAlliedUsers() { return listStaffRole("allied"); }
+	@PostMapping("/add-allied")
+	public ResponseEntity<Map<String, Object>> addAllied(@RequestBody Map<String, Object> body) { return addStaffRole(body, "allied"); }
+
 	@GetMapping("/profile")
 	public Map<String, Object> getProfile() {
 		AuthUser auth = securityUtils.requireAdmin();
@@ -543,5 +578,38 @@ public class AdminController {
 			}
 		}
 		return true;
+	}
+
+	private List<Map<String, Object>> listStaffRole(String role) {
+		securityUtils.requireAdmin();
+		return adminRepository.findAll().stream()
+				.filter(a -> role.equalsIgnoreCase(a.getRole()))
+				.map(responseMapper::admin)
+				.toList();
+	}
+
+	private ResponseEntity<Map<String, Object>> addStaffRole(Map<String, Object> body, String role) {
+		securityUtils.requireAdmin();
+		String firstName = str(body.get("firstName"));
+		String lastName = str(body.get("lastName"));
+		String email = str(body.get("email"));
+		String password = str(body.get("password"));
+		if (!allPresent(firstName, lastName, email, password)) {
+			throw new ApiException(400, "First name, last name, email, and password are required");
+		}
+		try {
+			Admin user = new Admin();
+			user.setFirstName(firstName.trim());
+			user.setLastName(lastName.trim());
+			user.setEmail(email.trim().toLowerCase(Locale.ROOT));
+			user.setPassword(passwordEncoder.encode(password));
+			user.setRole(role);
+			user = adminRepository.save(user);
+			return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+					"message", "Staff user created successfully",
+					"user", responseMapper.admin(user)));
+		} catch (DataIntegrityViolationException ex) {
+			throw new ApiException(400, "Email already exists");
+		}
 	}
 }

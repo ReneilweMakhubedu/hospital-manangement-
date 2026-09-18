@@ -58,6 +58,18 @@ const Login = () => {
         navigate('/procurement');
       } else if (data.role === 'pharmacy') {
         navigate('/pharmacy');
+      } else if (data.role === 'nurse' || data.role === 'nurse_manager') {
+        navigate('/nursing');
+      } else if (data.role === 'casualty') {
+        navigate('/casualty');
+      } else if (data.role === 'lab') {
+        navigate('/lab');
+      } else if (data.role === 'radiology') {
+        navigate('/radiology');
+      } else if (data.role === 'facilities') {
+        navigate('/facilities');
+      } else if (data.role === 'allied') {
+        navigate('/allied');
       } else if (data.role === 'admin') {
         navigate('/admin');
       } else if (data.role === 'doctor') {

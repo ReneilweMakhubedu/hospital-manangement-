@@ -6,6 +6,7 @@ import {
   HeartPulse,
   LayoutDashboard,
   LogOut,
+  Play,
   Settings,
   Users,
   Wallet,
@@ -13,6 +14,8 @@ import {
 import BrandLogo from './BrandLogo';
 import { asiphileniPillars, brand } from '../brand';
 import { portalChrome as ui } from '../theme';
+import { apiFetch } from '../auth';
+import { AssistPanel, StaffAlertsBell } from './AssistTools';
 
 const pillarIcons = {
   infrastructure: Building2,
@@ -25,11 +28,24 @@ const pillarIcons = {
 export default function Admin() {
   const navigate = useNavigate();
   const [activePillar, setActivePillar] = useState('hr');
+  const [runStatus, setRunStatus] = useState('');
 
   const pillar = asiphileniPillars.find((p) => p.id === activePillar) || asiphileniPillars[0];
   const PillarIcon = pillarIcons[pillar.id] || LayoutDashboard;
 
   const moduleTotal = asiphileniPillars.reduce((n, p) => n + p.modules.length, 0);
+
+  const runAutomation = async () => {
+    setRunStatus('Running…');
+    try {
+      const res = await apiFetch('/automation/run', { navigate, method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Automation run failed');
+      setRunStatus(`Created ${data.alertsCreated ?? 0} alerts · SMS sent ${data.sms?.remindersSent ?? 0}`);
+    } catch (e) {
+      setRunStatus(e instanceof Error ? e.message : 'Automation run failed');
+    }
+  };
 
   return (
     <div className={ui.page}>
@@ -96,14 +112,25 @@ export default function Admin() {
 
       <main className="flex-1 overflow-y-auto p-8 lg:p-10">
         <div className="mb-8 rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-8 shadow-sm">
-          <p className={ui.eyebrow}>Administration</p>
-          <h1 className="mt-2 text-3xl font-bold text-[#1f1f1f] sm:text-4xl">
-            {brand.shortName} command centre
-          </h1>
-          <p className="mt-3 max-w-2xl text-lg text-[#8b8b8b]">
-            Modules are organised by {brand.programme} so infrastructure, HR, finance, patient
-            experience, and monitoring stay aligned with provincial priorities.
-          </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className={ui.eyebrow}>Administration</p>
+              <h1 className="mt-2 text-3xl font-bold text-[#1f1f1f] sm:text-4xl">
+                {brand.shortName} command centre
+              </h1>
+              <p className="mt-3 max-w-2xl text-lg text-[#8b8b8b]">
+                Modules are organised by {brand.programme} so infrastructure, HR, finance, patient
+                experience, and monitoring stay aligned with provincial priorities.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <StaffAlertsBell />
+              <button type="button" onClick={runAutomation} className={ui.btnPrimary}>
+                <Play size={16} /> Run automation
+              </button>
+            </div>
+          </div>
+          {runStatus && <p className="mt-4 text-sm text-[#8b8b8b]">{runStatus}</p>}
         </div>
 
         <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -160,6 +187,7 @@ export default function Admin() {
             <p className="text-sm text-[#8b8b8b]">No modules listed for this pillar.</p>
           )}
         </section>
+        <AssistPanel portal="admin" />
       </main>
     </div>
   );
