@@ -30,6 +30,28 @@ import PharmacyFinance from "./components/pharmacy/PharmacyFinance";
 import PharmacyInventory from "./components/pharmacy/PharmacyInventory";
 import PharmacyDispense from "./components/pharmacy/PharmacyDispense";
 import PharmacyUsers from "./components/pharmacy/PharmacyUsers";
+import NursingDashboard from "./components/nursing/NursingDashboard";
+import NursingBeds from "./components/nursing/NursingBeds";
+import NursingVitals from "./components/nursing/NursingVitals";
+import NursingMeds from "./components/nursing/NursingMeds";
+import NursingHandovers from "./components/nursing/NursingHandovers";
+import NursingUsers from "./components/nursing/NursingUsers";
+import CasualtyDashboard from "./components/casualty/CasualtyDashboard";
+import CasualtyVisits from "./components/casualty/CasualtyVisits";
+import CasualtyUsers from "./components/casualty/CasualtyUsers";
+import LabDashboard from "./components/lab/LabDashboard";
+import LabOrders from "./components/lab/LabOrders";
+import LabUsers from "./components/lab/LabUsers";
+import RadiologyDashboard from "./components/radiology/RadiologyDashboard";
+import RadiologyOrders from "./components/radiology/RadiologyOrders";
+import RadiologyUsers from "./components/radiology/RadiologyUsers";
+import FacilitiesDashboard from "./components/facilities/FacilitiesDashboard";
+import FacilitiesWorkOrders from "./components/facilities/FacilitiesWorkOrders";
+import FacilitiesAssets from "./components/facilities/FacilitiesAssets";
+import FacilitiesUsers from "./components/facilities/FacilitiesUsers";
+import AlliedDashboard from "./components/allied/AlliedDashboard";
+import AlliedReferrals from "./components/allied/AlliedReferrals";
+import AlliedUsers from "./components/allied/AlliedUsers";
 import Complaints from "./components/Complaints";
 import SmsReminders from "./components/SmsReminders";
 import TheatreUtilisation from "./components/TheatreUtilisation";
@@ -94,6 +116,12 @@ function homeForRole(role) {
   if (role === "payroll") return "/payroll";
   if (role === "procurement") return "/procurement";
   if (role === "pharmacy") return "/pharmacy";
+  if (role === "nurse" || role === "nurse_manager") return "/nursing";
+  if (role === "casualty") return "/casualty";
+  if (role === "lab") return "/lab";
+  if (role === "radiology") return "/radiology";
+  if (role === "facilities") return "/facilities";
+  if (role === "allied") return "/allied";
   if (role === "patient") return "/patient/dashboard";
   if (role === "doctor") return "/doctor";
   return "/admin";
@@ -114,6 +142,31 @@ function RoleRoute({ roles, children }) {
   return children;
 }
 
+const departmentRoutes = [
+  { path: "/nursing", roles: ["admin", "nurse", "nurse_manager"], element: <NursingDashboard /> },
+  { path: "/nursing/beds", roles: ["admin", "nurse", "nurse_manager"], element: <NursingBeds /> },
+  { path: "/nursing/vitals", roles: ["admin", "nurse", "nurse_manager"], element: <NursingVitals /> },
+  { path: "/nursing/meds", roles: ["admin", "nurse", "nurse_manager"], element: <NursingMeds /> },
+  { path: "/nursing/handovers", roles: ["admin", "nurse", "nurse_manager"], element: <NursingHandovers /> },
+  { path: "/nursing/users", roles: ["admin"], element: <NursingUsers /> },
+  { path: "/casualty", roles: ["admin", "casualty"], element: <CasualtyDashboard /> },
+  { path: "/casualty/visits", roles: ["admin", "casualty"], element: <CasualtyVisits /> },
+  { path: "/casualty/users", roles: ["admin"], element: <CasualtyUsers /> },
+  { path: "/lab", roles: ["admin", "lab"], element: <LabDashboard /> },
+  { path: "/lab/orders", roles: ["admin", "lab"], element: <LabOrders /> },
+  { path: "/lab/users", roles: ["admin"], element: <LabUsers /> },
+  { path: "/radiology", roles: ["admin", "radiology"], element: <RadiologyDashboard /> },
+  { path: "/radiology/orders", roles: ["admin", "radiology"], element: <RadiologyOrders /> },
+  { path: "/radiology/users", roles: ["admin"], element: <RadiologyUsers /> },
+  { path: "/facilities", roles: ["admin", "facilities"], element: <FacilitiesDashboard /> },
+  { path: "/facilities/work-orders", roles: ["admin", "facilities"], element: <FacilitiesWorkOrders /> },
+  { path: "/facilities/assets", roles: ["admin", "facilities"], element: <FacilitiesAssets /> },
+  { path: "/facilities/users", roles: ["admin"], element: <FacilitiesUsers /> },
+  { path: "/allied", roles: ["admin", "allied"], element: <AlliedDashboard /> },
+  { path: "/allied/referrals", roles: ["admin", "allied"], element: <AlliedReferrals /> },
+  { path: "/allied/users", roles: ["admin"], element: <AlliedUsers /> },
+];
+
 function App() {
   return (
     <BrowserRouter>
@@ -122,6 +175,14 @@ function App() {
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+
+        {departmentRoutes.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<RoleRoute roles={route.roles}>{route.element}</RoleRoute>}
+          />
+        ))}
 
         <Route
           path="/dashboard"

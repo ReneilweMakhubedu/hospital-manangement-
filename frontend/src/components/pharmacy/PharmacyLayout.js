@@ -17,6 +17,7 @@ import BrandLogo from '../BrandLogo';
 import { brand } from '../../brand';
 import { logout } from '../../auth';
 import { portalChrome as ui } from '../../theme';
+import { AssistPanel, StaffAlertsBell } from '../AssistTools';
 
 const NAV = [
   { to: '/pharmacy', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -102,10 +103,14 @@ export default function PharmacyLayout({ title, subtitle, children, actions }) {
               )}
               {subtitle && <p className="mt-2 max-w-2xl text-sm text-[#8b8b8b]">{subtitle}</p>}
             </div>
-            {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+            <div className="flex flex-wrap gap-2">
+              <StaffAlertsBell />
+              {actions}
+            </div>
           </header>
         )}
         {children}
+        <AssistPanel portal="pharmacy" />
       </main>
     </div>
   );

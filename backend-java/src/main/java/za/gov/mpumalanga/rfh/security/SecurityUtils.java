@@ -116,6 +116,39 @@ public class SecurityUtils {
 		return user;
 	}
 
+	public AuthUser requireNurse() {
+		return requireRoles("nurse", "nurse_manager", "admin", "super_admin");
+	}
+
+	public AuthUser requireCasualty() {
+		return requireRoles("casualty", "admin", "super_admin");
+	}
+
+	public AuthUser requireLab() {
+		return requireRoles("lab", "admin", "super_admin");
+	}
+
+	public AuthUser requireRadiology() {
+		return requireRoles("radiology", "admin", "super_admin");
+	}
+
+	public AuthUser requireFacilities() {
+		return requireRoles("facilities", "admin", "super_admin");
+	}
+
+	public AuthUser requireAllied() {
+		return requireRoles("allied", "admin", "super_admin");
+	}
+
+	/** Any hospital staff role (not patient) — automation alerts & assist. */
+	public AuthUser requireHospitalStaff() {
+		AuthUser user = requireUser();
+		if ("patient".equalsIgnoreCase(user.role())) {
+			throw new ApiException(403, "Patients cannot access staff automation tools");
+		}
+		return user;
+	}
+
 	public AuthUser requireSuperAdmin() {
 		AuthUser user = requireUser();
 		if (!"super_admin".equalsIgnoreCase(user.role())) {

@@ -40,6 +40,9 @@ const pillarIcons = {
   monitoring: ChartBar,
 };
 
+const SHARP_HEROES = ['/heroes/hero-1.jpg', '/heroes/hero-2.jpg', '/heroes/hero-3.jpg'];
+const MIN_HERO_WIDTH = 1280;
+
 const fallbackSlides = [
   {
     _id: 'fallback-1',
@@ -47,20 +50,42 @@ const fallbackSlides = [
     subtitle: `${brand.tagline}. Built to support tertiary referral care and ${brand.programme}.`,
     ctaLabel: 'Access the system',
     ctaLink: '/login',
-    imageUrl: null,
+    imageUrl: SHARP_HEROES[0],
+  },
+  {
+    _id: 'fallback-2',
+    title: `Aligned with ${brand.programme}`,
+    subtitle:
+      'Infrastructure, HR, finance, patient experience, and monitoring in one hospital platform.',
+    ctaLabel: 'Staff login',
+    ctaLink: '/login',
+    imageUrl: SHARP_HEROES[1],
+  },
+  {
+    _id: 'fallback-3',
+    title: 'Better patient flow. Stronger governance.',
+    subtitle: 'EMR, queues, surgical waiting lists, complaints SLA, theatre utilisation, and provincial reporting.',
+    ctaLabel: 'Create an account',
+    ctaLink: '/signup',
+    imageUrl: SHARP_HEROES[2],
   },
 ];
 
 function mediaUrl(path) {
   if (!path) return null;
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http') || path.startsWith('/heroes/')) return path;
   return `${API_ORIGIN}${path}`;
+}
+
+function sharpHeroFor(index) {
+  return SHARP_HEROES[index % SHARP_HEROES.length];
 }
 
 function Home() {
   const navigate = useNavigate();
   const [slides, setSlides] = useState(fallbackSlides);
   const [index, setIndex] = useState(0);
+  const [heroSrc, setHeroSrc] = useState(SHARP_HEROES[0]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +94,11 @@ function Home() {
         const response = await fetch(`${API_BASE}/cms/hero`);
         const data = await response.json();
         if (!cancelled && response.ok && Array.isArray(data) && data.length > 0) {
-          setSlides(data);
+          const mapped = data.map((slide, i) => ({
+            ...slide,
+            imageUrl: slide.imageUrl || sharpHeroFor(i),
+          }));
+          setSlides(mapped);
           setIndex(0);
         }
       } catch {
@@ -89,18 +118,38 @@ function Home() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  // Preload carousel images so slide changes stay sharp
-  useEffect(() => {
-    slides.forEach((item) => {
-      const url = mediaUrl(item.imageUrl);
-      if (!url) return;
-      const preload = new Image();
-      preload.src = url;
-    });
-  }, [slides]);
-
   const slide = slides[index] || fallbackSlides[0];
-  const image = mediaUrl(slide.imageUrl);
+  const cmsImage = mediaUrl(slide.imageUrl);
+
+  // Prefer sharp local heroes when CMS upload is missing or too small to stretch full-bleed
+  useEffect(() => {
+    let cancelled = false;
+    const fallback = sharpHeroFor(index);
+    if (!cmsImage || cmsImage.startsWith('/heroes/')) {
+      setHeroSrc(cmsImage || fallback);
+      return undefined;
+    }
+    const probe = new Image();
+    probe.onload = () => {
+      if (cancelled) return;
+      setHeroSrc(probe.naturalWidth >= MIN_HERO_WIDTH ? cmsImage : fallback);
+    };
+    probe.onerror = () => {
+      if (!cancelled) setHeroSrc(fallback);
+    };
+    probe.src = cmsImage;
+    return () => {
+      cancelled = true;
+    };
+  }, [cmsImage, index]);
+
+  // Preload sharp heroes
+  useEffect(() => {
+    SHARP_HEROES.forEach((src) => {
+      const preload = new Image();
+      preload.src = src;
+    });
+  }, []);
 
   const go = (link) => {
     if (!link) {
@@ -135,20 +184,16 @@ function Home() {
       </header>
 
       <section className="relative isolate min-h-[78vh] overflow-hidden bg-[#1f1f1f]">
-        {image ? (
-          <img
-            src={image}
-            alt=""
-            decoding="async"
-            fetchPriority="high"
-            sizes="100vw"
-            className="absolute inset-0 h-full w-full object-cover object-center"
-            style={{ imageRendering: 'auto' }}
-            key={slide._id || index}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[#f8f8f8]" aria-hidden />
-        )}
+        <img
+          src={heroSrc}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          sizes="100vw"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          style={{ imageRendering: 'auto' }}
+          key={heroSrc}
+        />
 
         <div className="container relative mx-auto flex min-h-[78vh] flex-col justify-center px-6 py-20">
           <div className="max-w-3xl rounded-2xl border border-[#8b8b8b]/25 bg-[#ffffff] p-6 shadow-sm sm:p-8">
