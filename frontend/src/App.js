@@ -108,8 +108,13 @@ import DoctorGovernance from "./components/doctor/DoctorGovernance";
 import DoctorProfile from "./components/doctor/DoctorProfile";
 import SuperAdminCms from "./components/SuperAdminCms";
 import { getRole, getToken } from "./auth";
+import Intelligence from "./components/Intelligence";
+import WardBoard from "./components/WardBoard";
+import { opsPortals, opsRoleHome } from "./components/ops/opsPortals";
+import { HousekeepingBeds, OpsDashboard, OpsUsers, OpsWork } from "./components/ops/OpsPages";
 
 function homeForRole(role) {
+  if (opsRoleHome[role]) return opsRoleHome[role];
   if (role === "super_admin") return "/cms";
   if (role === "hr") return "/hr";
   if (role === "finance") return "/finance";
@@ -131,6 +136,14 @@ function homeForRole(role) {
  * Guards staff routes by role. Token presence is enough for now
  * (JWT is not decoded client-side; API enforces validity).
  */
+function StaffRoute({ children }) {
+  const token = getToken();
+  const role = getRole();
+  if (!token) return <Navigate to="/login" replace />;
+  if (role === "patient") return <Navigate to="/patient/dashboard" replace />;
+  return children;
+}
+
 function RoleRoute({ roles, children }) {
   const token = getToken();
   const role = getRole();
@@ -165,6 +178,19 @@ const departmentRoutes = [
   { path: "/allied", roles: ["admin", "allied"], element: <AlliedDashboard /> },
   { path: "/allied/referrals", roles: ["admin", "allied"], element: <AlliedReferrals /> },
   { path: "/allied/users", roles: ["admin"], element: <AlliedUsers /> },
+  ...opsPortals.flatMap((portal) => {
+    const routes = [{ path: portal.home, roles: portal.roles, element: <OpsDashboard portal={portal} /> }];
+    if (portal.work) {
+      routes.push({ path: portal.work.path, roles: portal.work.roles || portal.roles, element: <OpsWork portal={portal} /> });
+    }
+    if (portal.beds) {
+      routes.push({ path: portal.beds.path, roles: portal.roles, element: <HousekeepingBeds portal={portal} /> });
+    }
+    (portal.users || []).forEach((users) => {
+      routes.push({ path: users.path, roles: ["admin"], element: <OpsUsers portal={portal} users={users} /> });
+    });
+    return routes;
+  }),
 ];
 
 function App() {
@@ -173,6 +199,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
+        <Route path="/intelligence" element={<StaffRoute><Intelligence /></StaffRoute>} />
+        <Route path="/ward-board" element={<StaffRoute><WardBoard /></StaffRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
 
@@ -211,7 +239,7 @@ function App() {
         <Route
           path="/reception"
           element={
-            <RoleRoute roles={["admin", "doctor"]}>
+            <RoleRoute roles={["admin", "doctor", "reception"]}>
               <Reception />
             </RoleRoute>
           }
@@ -315,7 +343,7 @@ function App() {
         <Route
           path="/complaints"
           element={
-            <RoleRoute roles={["admin", "doctor"]}>
+            <RoleRoute roles={["admin", "doctor", "quality"]}>
               <Complaints />
             </RoleRoute>
           }
@@ -331,7 +359,7 @@ function App() {
         <Route
           path="/theatres"
           element={
-            <RoleRoute roles={["admin", "doctor"]}>
+            <RoleRoute roles={["admin", "doctor", "theatre", "anaesthetist"]}>
               <TheatreUtilisation />
             </RoleRoute>
           }

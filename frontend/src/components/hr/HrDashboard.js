@@ -129,7 +129,7 @@ export default function HrDashboard() {
               icon={Users}
               label="Headcount"
               value={data?.headcount ?? 0}
-              detail="Active staff + clinicians"
+              detail="Every hospital staff member"
               to="/hr/employees"
             />
             <StatCard
@@ -183,6 +183,54 @@ export default function HrDashboard() {
               detail="Courses open / planned"
               to="/hr/training"
             />
+          </section>
+
+          <section className="mb-8 rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#8b8b8b]/30 px-5 py-4">
+              <h2 className="flex items-center gap-2 font-bold text-[#1f1f1f]">
+                <Users size={18} className="text-[#e41e1f]" /> Hospital staff
+              </h2>
+              <Link to="/hr/employees" className="text-sm font-semibold text-[#e41e1f] hover:underline">
+                Employee records
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-2 px-5 py-4">
+              {(Array.isArray(data?.staffByDepartment) ? data.staffByDepartment : []).map((group) => (
+                <span key={group.department} className="rounded-full bg-[#f8f8f8] px-3 py-1 text-xs font-semibold text-[#1f1f1f]">
+                  {group.department} · {group.count}
+                </span>
+              ))}
+            </div>
+            {(Array.isArray(data?.staff) ? data.staff : []).length === 0 ? (
+              <p className="px-5 pb-8 text-sm text-[#8b8b8b]">No staff records yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-[#f8f8f8] text-xs uppercase text-[#8b8b8b]">
+                    <tr>
+                      <th className="px-5 py-3 font-semibold">Name</th>
+                      <th className="px-5 py-3 font-semibold">Post</th>
+                      <th className="px-5 py-3 font-semibold">Department</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#8b8b8b]/25">
+                    {data.staff.map((person) => (
+                      <tr key={person.email}>
+                        <td className="px-5 py-3">
+                          <p className="font-medium text-[#1f1f1f]">{person.name}</p>
+                          <p className="text-xs text-[#8b8b8b]">{person.email}</p>
+                          {person.loginEmail && person.loginEmail !== person.email && (
+                            <p className="text-xs text-[#8b8b8b]">Login {person.loginEmail}</p>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-[#1f1f1f]">{person.jobTitle}</td>
+                        <td className="px-5 py-3 text-[#8b8b8b]">{person.department}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           <section className="mb-8 grid gap-6 lg:grid-cols-3">

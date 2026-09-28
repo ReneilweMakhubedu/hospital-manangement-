@@ -140,6 +140,14 @@ public class SecurityUtils {
 		return requireRoles("allied", "admin", "super_admin");
 	}
 
+	public AuthUser requireTheatreBoard() {
+		return requireRoles("admin", "super_admin", "doctor", "hr", "theatre", "anaesthetist");
+	}
+
+	public AuthUser requireComplaintsDesk() {
+		return requireRoles("admin", "super_admin", "doctor", "hr", "quality");
+	}
+
 	/** Any hospital staff role (not patient) — automation alerts & assist. */
 	public AuthUser requireHospitalStaff() {
 		AuthUser user = requireUser();

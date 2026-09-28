@@ -20,6 +20,8 @@ import za.gov.mpumalanga.rfh.entity.EdVisit;
 import za.gov.mpumalanga.rfh.entity.ImagingOrder;
 import za.gov.mpumalanga.rfh.entity.LabOrder;
 import za.gov.mpumalanga.rfh.entity.Medicine;
+import za.gov.mpumalanga.rfh.entity.OpsItem;
+import za.gov.mpumalanga.rfh.entity.WardBed;
 import za.gov.mpumalanga.rfh.entity.NursingMedAdmin;
 import za.gov.mpumalanga.rfh.entity.PharmacyQueueTicket;
 import za.gov.mpumalanga.rfh.entity.SmsReminder;
@@ -43,6 +45,7 @@ public class AutomationService {
 	private final SmsReminderRepository smsReminderRepository;
 	private final AppointmentRepository appointmentRepository;
 	private final UserRepository userRepository;
+	private final LearningService learningService;
 
 	public AutomationService(
 			SupportStore supportStore,
@@ -51,7 +54,8 @@ public class AutomationService {
 			PharmacyQueueTicketRepository ticketRepository,
 			SmsReminderRepository smsReminderRepository,
 			AppointmentRepository appointmentRepository,
-			UserRepository userRepository) {
+			UserRepository userRepository,
+			LearningService learningService) {
 		this.supportStore = supportStore;
 		this.complaintRepository = complaintRepository;
 		this.medicineRepository = medicineRepository;
@@ -59,6 +63,7 @@ public class AutomationService {
 		this.smsReminderRepository = smsReminderRepository;
 		this.appointmentRepository = appointmentRepository;
 		this.userRepository = userRepository;
+		this.learningService = learningService;
 	}
 
 	@Transactional
@@ -151,11 +156,17 @@ public class AutomationService {
 				created += upsert("admin", "HIGH", "Complaint acknowledgement overdue",
 						"Complaint #" + c.getId() + " past 5-day ack SLA.",
 						"complaints-sla", "complaint-ack-" + c.getId());
+				created += upsert("quality", "HIGH", "Complaint acknowledgement overdue",
+						"Complaint #" + c.getId() + " past 5-day ack SLA.",
+						"complaints-sla", "complaint-ack-q-" + c.getId());
 			}
 			if (c.getResolvedAt() == null && c.getSlaResolveDueAt() != null && c.getSlaResolveDueAt().isBefore(now)) {
 				created += upsert("admin", "CRITICAL", "Complaint resolution overdue",
 						"Complaint #" + c.getId() + " past 25-day resolve SLA.",
 						"complaints-sla", "complaint-resolve-" + c.getId());
+				created += upsert("quality", "CRITICAL", "Complaint resolution overdue",
+						"Complaint #" + c.getId() + " past 25-day resolve SLA.",
+						"complaints-sla", "complaint-resolve-q-" + c.getId());
 			}
 		}
 
@@ -279,6 +290,38 @@ public class AutomationService {
 					"pharmacy-queue", "pharmacy-queue-backlog");
 		}
 
+		long bedRequests = supportStore.all(OpsItem.class).stream()
+				.filter(item -> "reception".equalsIgnoreCase(item.desk))
+				.filter(item -> "WAITING".equalsIgnoreCase(item.status) || "BED_REQUESTED".equalsIgnoreCase(item.status))
+				.count();
+		if (bedRequests > 0) {
+			created += upsert("nurse", "HIGH", "Bed requests waiting",
+					bedRequests + " admission request(s) still need a floor, ward, and bed.",
+					"bed-requests", "bed-requests-open");
+			created += upsert("reception", "MEDIUM", "Bed requests still open",
+					bedRequests + " request(s) are with nursing for allocation.",
+					"bed-requests", "bed-requests-reception");
+		}
+		long cleaning = supportStore.all(WardBed.class).stream().filter(bed -> "CLEANING".equalsIgnoreCase(bed.status)).count();
+		if (cleaning > 0) {
+			created += upsert("housekeeping", "MEDIUM", "Beds waiting to be released",
+					cleaning + " bed(s) are in cleaning and can be marked available.",
+					"housekeeping-beds", "cleaning-beds");
+		}
+		long porterJobs = supportStore.all(OpsItem.class).stream()
+				.filter(item -> "porter".equalsIgnoreCase(item.desk) && "REQUESTED".equalsIgnoreCase(item.status))
+				.count();
+		if (porterJobs > 0) {
+			created += upsert("porter", "MEDIUM", "Patient moves requested",
+					porterJobs + " transport job(s) are waiting.",
+					"porter-jobs", "porter-requested");
+		}
+		for (Map<String, Object> signal : learningService.automationSignals()) {
+			created += upsert(String.valueOf(signal.get("audience")), String.valueOf(signal.get("severity")),
+					String.valueOf(signal.get("title")), String.valueOf(signal.get("detail")),
+					"machine-learning", String.valueOf(signal.get("fingerprint")));
+		}
+
 		return created;
 	}
 
@@ -293,7 +336,8 @@ public class AutomationService {
 			boolean match = audience.equals(r)
 					|| "admin".equals(r)
 					|| "super_admin".equals(r)
-					|| ("nurse_manager".equals(r) && "nurse".equals(audience));
+					|| ("nurse_manager".equals(r) && "nurse".equals(audience))
+					|| ("anaesthetist".equals(r) && "theatre".equals(audience));
 			if (!match) {
 				continue;
 			}

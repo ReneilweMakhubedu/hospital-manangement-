@@ -59,7 +59,7 @@ public class ComplaintsController {
 
 	@GetMapping
 	public List<Map<String, Object>> list() {
-		securityUtils.requireStaff();
+		securityUtils.requireComplaintsDesk();
 		Instant now = Instant.now();
 		return complaintRepository.findAllByOrderByLoggedAtDesc().stream()
 				.map(c -> enriched(c, now))
@@ -68,7 +68,7 @@ public class ComplaintsController {
 
 	@GetMapping("/summary")
 	public Map<String, Object> summary() {
-		securityUtils.requireStaff();
+		securityUtils.requireComplaintsDesk();
 		Instant now = Instant.now();
 		List<Complaint> all = complaintRepository.findAll();
 		long open = all.stream().filter(c -> OPEN_STATUSES.contains(norm(c.getStatus()))).count();
@@ -90,7 +90,7 @@ public class ComplaintsController {
 
 	@PostMapping
 	public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-		AuthUser auth = securityUtils.requireStaff();
+		AuthUser auth = securityUtils.requireComplaintsDesk();
 		String complainantName = requireText(str(body.get("complainantName")), "complainantName");
 		String channel = normalizeChannel(str(body.get("channel")));
 		String subject = requireText(str(body.get("subject")), "subject");
@@ -123,7 +123,7 @@ public class ComplaintsController {
 
 	@PutMapping("/{id}")
 	public Map<String, Object> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-		securityUtils.requireStaff();
+		securityUtils.requireComplaintsDesk();
 		Complaint complaint = complaintRepository.findById(id)
 				.orElseThrow(() -> new ApiException(404, "Complaint not found"));
 

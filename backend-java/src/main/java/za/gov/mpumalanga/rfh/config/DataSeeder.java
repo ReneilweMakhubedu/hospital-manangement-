@@ -9,6 +9,7 @@ import java.util.List;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import za.gov.mpumalanga.rfh.entity.Admin;
 import za.gov.mpumalanga.rfh.entity.AuditEvent;
@@ -72,6 +73,7 @@ import za.gov.mpumalanga.rfh.entity.LabOrder;
 import za.gov.mpumalanga.rfh.entity.NursingHandover;
 import za.gov.mpumalanga.rfh.entity.NursingMedAdmin;
 import za.gov.mpumalanga.rfh.entity.NursingVital;
+import za.gov.mpumalanga.rfh.entity.OpsItem;
 import za.gov.mpumalanga.rfh.entity.WardBed;
 import za.gov.mpumalanga.rfh.repository.AdminRepository;
 import za.gov.mpumalanga.rfh.repository.AuditEventRepository;
@@ -130,6 +132,7 @@ import za.gov.mpumalanga.rfh.repository.VendorRepository;
 import za.gov.mpumalanga.rfh.repository.SupportStore;
 
 @Component
+@Order(0)
 public class DataSeeder implements ApplicationRunner {
 
 	private final AdminRepository adminRepository;
@@ -380,13 +383,28 @@ public class DataSeeder implements ApplicationRunner {
 		seedStaffLogin("Diagnostic", "Radiology", "radiology@rfh.gov.za", "Radiology123!", "radiology");
 		seedStaffLogin("Hospital", "Facilities", "facilities@rfh.gov.za", "Facilities123!", "facilities");
 		seedStaffLogin("Allied", "Health", "allied@rfh.gov.za", "Allied123!", "allied");
+		seedStaffLogin("Front", "Reception", "reception@rfh.gov.za", "Reception123!", "reception");
+		seedStaffLogin("Hospital", "Housekeeping", "housekeeping@rfh.gov.za", "Housekeeping123!", "housekeeping");
+		seedStaffLogin("Hospital", "Porter", "porter@rfh.gov.za", "Porter123!", "porter");
+		seedStaffLogin("Medical", "Records", "records@rfh.gov.za", "Records123!", "records");
+		seedStaffLogin("Maternity", "Midwife", "midwife@rfh.gov.za", "Midwife123!", "midwife");
+		seedStaffLogin("Theatre", "Nurse", "theatre@rfh.gov.za", "Theatre123!", "theatre");
+		seedStaffLogin("Theatre", "Anaesthetist", "anaesthetist@rfh.gov.za", "Anaesthetist123!", "anaesthetist");
+		seedStaffLogin("Infection", "Prevention", "infection@rfh.gov.za", "Infection123!", "infection");
+		seedStaffLogin("Social", "Worker", "social@rfh.gov.za", "Social123!", "social");
+		seedStaffLogin("Hospital", "Security", "security@rfh.gov.za", "Security123!", "security");
+		seedStaffLogin("Hospital", "Catering", "catering@rfh.gov.za", "Catering123!", "catering");
+		seedStaffLogin("Quality", "Officer", "quality@rfh.gov.za", "Quality123!", "quality");
+		seedStaffLogin("Hospital", "Mortuary", "mortuary@rfh.gov.za", "Mortuary123!", "mortuary");
 
 		seedNursingModule();
+		backfillBedFloors();
 		seedCasualtyModule();
 		seedLabModule();
 		seedRadiologyModule();
 		seedFacilitiesModule();
 		seedAlliedModule();
+		seedOpsDesks();
 
 		if (heroSlideRepository.count() == 0) {
 			seedHeroSlide(
@@ -398,7 +416,7 @@ public class DataSeeder implements ApplicationRunner {
 			seedHeroSlide(
 					"Aligned with #OperationAsiphileni",
 					"Infrastructure, HR, finance, patient experience, and monitoring in one hospital platform.",
-					"Staff login",
+					"Login",
 					"/login",
 					1);
 			seedHeroSlide(
@@ -492,6 +510,7 @@ public class DataSeeder implements ApplicationRunner {
 		}
 
 		seedHrModule();
+		registerLoginStaff();
 
 		User patient = ensureSeedPatient();
 		seedPatientMedications(patient);
@@ -1679,6 +1698,30 @@ public class DataSeeder implements ApplicationRunner {
 				Instant.now().minus(20, ChronoUnit.DAYS));
 	}
 
+	private void registerLoginStaff() {
+		java.util.Set<String> emails = new java.util.HashSet<>();
+		for (HrEmployee employee : hrEmployeeRepository.findAll()) {
+			if (employee.getEmail() != null) emails.add(employee.getEmail().toLowerCase());
+		}
+		java.time.LocalDate today = java.time.LocalDate.now();
+		for (Admin admin : adminRepository.findAll()) {
+			registerIfMissing(emails, "LOGIN-A-" + admin.getId(), admin.getFirstName(), admin.getLastName(), admin.getEmail(), admin.getRole(), today);
+		}
+		for (Doctor doctor : doctorRepository.findAll()) {
+			registerIfMissing(emails, "LOGIN-D-" + doctor.getId(), doctor.getFirstName(), doctor.getLastName(), doctor.getEmail(), "doctor", today);
+		}
+	}
+
+	private void registerIfMissing(java.util.Set<String> emails, String employeeNumber, String firstName, String lastName, String email, String role, java.time.LocalDate today) {
+		if (email == null || email.isBlank() || emails.contains(email.toLowerCase())) return;
+		StaffPosts.Post post = StaffPosts.forRole(role);
+		String given = firstName == null || firstName.isBlank() ? "Hospital" : firstName;
+		String family = lastName == null || lastName.isBlank() ? "Staff" : lastName;
+		seedEmployee(employeeNumber, given, family, email, null, post.department(), post.jobTitle(),
+				"PERMANENT", today.minusYears(1), null, "ACTIVE", null, null, "HR Officer", 1, today.minusYears(32));
+		emails.add(email.toLowerCase());
+	}
+
 	private HrEmployee seedEmployee(
 			String employeeNumber,
 			String firstName,
@@ -2284,14 +2327,18 @@ public class DataSeeder implements ApplicationRunner {
 	private void seedNursingModule() {
 		if (supportStore.count(WardBed.class) == 0) {
 			WardBed a = new WardBed();
-			a.wardName = "Medical Ward A"; a.bedNumber = "A-01"; a.status = "OCCUPIED";
+			a.floor = "1"; a.wardName = "Medical Ward A"; a.bedNumber = "1"; a.status = "OCCUPIED";
 			a.patientName = "Nomsa Mthembu"; a.patientId = 1001L; a.acuity = "HIGH";
+			a.createdByEmail = "nursemanager@rfh.gov.za";
+			a.allocatedByEmail = "nurse@rfh.gov.za";
 			a.admittedAt = Instant.now().minus(18, ChronoUnit.HOURS); supportStore.save(a);
 			WardBed b = new WardBed();
-			b.wardName = "Medical Ward A"; b.bedNumber = "A-02"; b.status = "AVAILABLE"; b.acuity = "LOW";
+			b.floor = "1"; b.wardName = "Medical Ward A"; b.bedNumber = "2"; b.status = "AVAILABLE"; b.acuity = "LOW";
+			b.createdByEmail = "nursemanager@rfh.gov.za";
 			supportStore.save(b);
 			WardBed c = new WardBed();
-			c.wardName = "Surgical Ward B"; c.bedNumber = "B-07"; c.status = "CLEANING"; c.acuity = "MEDIUM";
+			c.floor = "2"; c.wardName = "Surgical Ward B"; c.bedNumber = "1"; c.status = "CLEANING"; c.acuity = "MEDIUM";
+			c.createdByEmail = "nursemanager@rfh.gov.za";
 			supportStore.save(c);
 		}
 		if (supportStore.count(NursingHandover.class) == 0) {
@@ -2315,6 +2362,39 @@ public class DataSeeder implements ApplicationRunner {
 			NursingMedAdmin due = new NursingMedAdmin();
 			due.patientName = "Nomsa Mthembu"; due.medication = "Paracetamol"; due.dose = "1 g";
 			due.route = "PO"; due.status = "HELD"; due.nurseEmail = "nurse@rfh.gov.za"; supportStore.save(due);
+		}
+	}
+
+	private void backfillBedFloors() {
+		for (WardBed bed : supportStore.all(WardBed.class)) {
+			boolean changed = false;
+			if (bed.floor == null || bed.floor.isBlank()) {
+				bed.floor = "Surgical Ward B".equalsIgnoreCase(bed.wardName) ? "2" : "1";
+				changed = true;
+			}
+			if ("A-01".equalsIgnoreCase(bed.bedNumber)) {
+				bed.bedNumber = "1";
+				changed = true;
+			} else if ("A-02".equalsIgnoreCase(bed.bedNumber)) {
+				bed.bedNumber = "2";
+				changed = true;
+			} else if ("B-07".equalsIgnoreCase(bed.bedNumber)) {
+				bed.floor = "2";
+				bed.bedNumber = "1";
+				changed = true;
+			}
+			if (bed.createdByEmail == null || bed.createdByEmail.isBlank()) {
+				bed.createdByEmail = "nursemanager@rfh.gov.za";
+				changed = true;
+			}
+			if ("OCCUPIED".equalsIgnoreCase(bed.status)
+					&& bed.patientName != null
+					&& !bed.patientName.isBlank()
+					&& (bed.allocatedByEmail == null || bed.allocatedByEmail.isBlank())) {
+				bed.allocatedByEmail = "nurse@rfh.gov.za";
+				changed = true;
+			}
+			if (changed) supportStore.save(bed);
 		}
 	}
 
@@ -2397,6 +2477,33 @@ public class DataSeeder implements ApplicationRunner {
 		social.reason = "Discharge planning and family support"; social.status = "NEW";
 		social.referredBy = "nursemanager@rfh.gov.za"; social.createdAt = Instant.now().minus(5, ChronoUnit.HOURS);
 		supportStore.save(social);
+	}
+
+	private void seedOpsDesks() {
+		if (supportStore.count(OpsItem.class) != 0) return;
+		saveOps("reception", "Lindiwe Nkosi", "Floor 1 · Medical Ward A", "Admission for pneumonia. Bed requested.", "BED_REQUESTED", "reception@rfh.gov.za");
+		saveOps("housekeeping", null, "Floor 2 · Surgical Ward B · Bed 1", "Terminal clean after discharge", "OPEN", "housekeeping@rfh.gov.za");
+		saveOps("porter", "Lindiwe Nkosi", "From: Casualty", "To: Floor 1 · Medical Ward A · Bed 2", "REQUESTED", "porter@rfh.gov.za");
+		saveOps("records", "Nomsa Mthembu", "Floor 1 · Medical Ward A · Bed 1", "Pull inpatient chart for ward round", "REQUESTED", "records@rfh.gov.za");
+		saveOps("midwife", "Thandiwe Sibiya", "Maternity ward", "Antenatal visit at 36 weeks", "ANTENATAL", "midwife@rfh.gov.za");
+		saveOps("theatre", "Petrus Mokoena", "Theatre 1", "Incision and drainage", "BOOKED", "theatre@rfh.gov.za");
+		saveOps("infection", "Nomsa Mthembu", "Floor 1 · Medical Ward A · Bed 1", "Contact precautions pending result", "SUSPECTED", "infection@rfh.gov.za");
+		saveOps("social", "Petrus Mokoena", "Surgical Ward B", "Family support before discharge", "OPEN", "social@rfh.gov.za");
+		saveOps("security", null, "Main entrance", "Visitor access after hours", "OPEN", "security@rfh.gov.za");
+		saveOps("catering", "Nomsa Mthembu", "Floor 1 · Medical Ward A", "Diabetic soft diet", "ORDERED", "catering@rfh.gov.za");
+		saveOps("mortuary", "Unknown adult", "Casualty", "Received pending identification", "RECEIVED", "mortuary@rfh.gov.za");
+	}
+
+	private void saveOps(String desk, String patientName, String location, String detail, String status, String ownerEmail) {
+		OpsItem item = new OpsItem();
+		item.desk = desk;
+		item.patientName = patientName;
+		item.location = location;
+		item.detail = detail;
+		item.status = status;
+		item.createdAt = Instant.now();
+		item.ownerEmail = ownerEmail;
+		supportStore.save(item);
 	}
 }
 

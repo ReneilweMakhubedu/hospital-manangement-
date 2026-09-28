@@ -387,6 +387,71 @@ public class AdminController {
 	@PostMapping("/add-allied")
 	public ResponseEntity<Map<String, Object>> addAllied(@RequestBody Map<String, Object> body) { return addStaffRole(body, "allied"); }
 
+	@GetMapping("/reception-users")
+	public List<Map<String, Object>> listReceptionUsers() { return listStaffRole("reception"); }
+	@PostMapping("/add-reception")
+	public ResponseEntity<Map<String, Object>> addReception(@RequestBody Map<String, Object> body) { return addStaffRole(body, "reception"); }
+
+	@GetMapping("/housekeeping-users")
+	public List<Map<String, Object>> listHousekeepingUsers() { return listStaffRole("housekeeping"); }
+	@PostMapping("/add-housekeeping")
+	public ResponseEntity<Map<String, Object>> addHousekeeping(@RequestBody Map<String, Object> body) { return addStaffRole(body, "housekeeping"); }
+
+	@GetMapping("/porter-users")
+	public List<Map<String, Object>> listPorterUsers() { return listStaffRole("porter"); }
+	@PostMapping("/add-porter")
+	public ResponseEntity<Map<String, Object>> addPorter(@RequestBody Map<String, Object> body) { return addStaffRole(body, "porter"); }
+
+	@GetMapping("/records-users")
+	public List<Map<String, Object>> listRecordsUsers() { return listStaffRole("records"); }
+	@PostMapping("/add-records")
+	public ResponseEntity<Map<String, Object>> addRecords(@RequestBody Map<String, Object> body) { return addStaffRole(body, "records"); }
+
+	@GetMapping("/midwife-users")
+	public List<Map<String, Object>> listMidwifeUsers() { return listStaffRole("midwife"); }
+	@PostMapping("/add-midwife")
+	public ResponseEntity<Map<String, Object>> addMidwife(@RequestBody Map<String, Object> body) { return addStaffRole(body, "midwife"); }
+
+	@GetMapping("/theatre-users")
+	public List<Map<String, Object>> listTheatreUsers() { return listStaffRole("theatre"); }
+	@PostMapping("/add-theatre")
+	public ResponseEntity<Map<String, Object>> addTheatre(@RequestBody Map<String, Object> body) { return addStaffRole(body, "theatre"); }
+
+	@GetMapping("/anaesthetist-users")
+	public List<Map<String, Object>> listAnaesthetistUsers() { return listStaffRole("anaesthetist"); }
+	@PostMapping("/add-anaesthetist")
+	public ResponseEntity<Map<String, Object>> addAnaesthetist(@RequestBody Map<String, Object> body) { return addStaffRole(body, "anaesthetist"); }
+
+	@GetMapping("/infection-users")
+	public List<Map<String, Object>> listInfectionUsers() { return listStaffRole("infection"); }
+	@PostMapping("/add-infection")
+	public ResponseEntity<Map<String, Object>> addInfection(@RequestBody Map<String, Object> body) { return addStaffRole(body, "infection"); }
+
+	@GetMapping("/social-users")
+	public List<Map<String, Object>> listSocialUsers() { return listStaffRole("social"); }
+	@PostMapping("/add-social")
+	public ResponseEntity<Map<String, Object>> addSocial(@RequestBody Map<String, Object> body) { return addStaffRole(body, "social"); }
+
+	@GetMapping("/security-users")
+	public List<Map<String, Object>> listSecurityUsers() { return listStaffRole("security"); }
+	@PostMapping("/add-security")
+	public ResponseEntity<Map<String, Object>> addSecurity(@RequestBody Map<String, Object> body) { return addStaffRole(body, "security"); }
+
+	@GetMapping("/catering-users")
+	public List<Map<String, Object>> listCateringUsers() { return listStaffRole("catering"); }
+	@PostMapping("/add-catering")
+	public ResponseEntity<Map<String, Object>> addCatering(@RequestBody Map<String, Object> body) { return addStaffRole(body, "catering"); }
+
+	@GetMapping("/quality-users")
+	public List<Map<String, Object>> listQualityUsers() { return listStaffRole("quality"); }
+	@PostMapping("/add-quality")
+	public ResponseEntity<Map<String, Object>> addQuality(@RequestBody Map<String, Object> body) { return addStaffRole(body, "quality"); }
+
+	@GetMapping("/mortuary-users")
+	public List<Map<String, Object>> listMortuaryUsers() { return listStaffRole("mortuary"); }
+	@PostMapping("/add-mortuary")
+	public ResponseEntity<Map<String, Object>> addMortuary(@RequestBody Map<String, Object> body) { return addStaffRole(body, "mortuary"); }
+
 	@GetMapping("/profile")
 	public Map<String, Object> getProfile() {
 		AuthUser auth = securityUtils.requireAdmin();

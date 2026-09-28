@@ -186,7 +186,8 @@ public class QueueController {
 
 	private void requireStaff() {
 		var user = securityUtils.requireUser();
-		if (!"admin".equalsIgnoreCase(user.role()) && !"doctor".equalsIgnoreCase(user.role())) {
+		String role = user.role() == null ? "" : user.role();
+		if (!"admin".equalsIgnoreCase(role) && !"doctor".equalsIgnoreCase(role) && !"reception".equalsIgnoreCase(role)) {
 			throw new ApiException(403, "Only clinic staff can manage the queue");
 		}
 	}
