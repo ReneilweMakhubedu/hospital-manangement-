@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Check, LoaderCircle, RefreshCw, Sparkles, X } from 'lucide-react';
 
 import { apiFetch, getRole } from '../auth';
@@ -59,6 +59,54 @@ const PORTAL_ACTIONS = {
   ],
   admin: [
     { action: 'summarise', label: 'Summarise' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  reception: [
+    { action: 'summarise', label: 'Summarise request' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  housekeeping: [
+    { action: 'work-order', label: 'Draft task' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  porter: [
+    { action: 'prioritise', label: 'Prioritise move' },
+    { action: 'summarise', label: 'Summarise' },
+  ],
+  records: [
+    { action: 'summarise', label: 'Summarise chart request' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  midwife: [
+    { action: 'draft-note', label: 'Draft note' },
+    { action: 'handover', label: 'Draft handover' },
+  ],
+  theatre: [
+    { action: 'summarise', label: 'Summarise case' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  infection: [
+    { action: 'summarise', label: 'Summarise precaution' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  social: [
+    { action: 'summarise', label: 'Summarise case' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  security: [
+    { action: 'summarise', label: 'Summarise incident' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  catering: [
+    { action: 'summarise', label: 'Summarise diet' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  quality: [
+    { action: 'summarise', label: 'Summarise complaint' },
+    { action: 'prioritise', label: 'Prioritise' },
+  ],
+  mortuary: [
+    { action: 'summarise', label: 'Summarise record' },
     { action: 'prioritise', label: 'Prioritise' },
   ],
 };
@@ -205,9 +253,10 @@ export function AssistPanel({ portal = 'admin', defaultOpen = false }) {
     <div className={`${ui.card} mt-6 p-5`}>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className={ui.eyebrow}>AI & automation</p>
+          <p className={ui.eyebrow}>AI assist</p>
           <h3 className="mt-1 text-lg font-semibold text-[#1f1f1f]">Assist</h3>
-          <p className="mt-1 text-sm text-[#8b8b8b]">Drafts and suggestions only — confirm before applying to the record.</p>
+          <p className="mt-1 text-sm text-[#8b8b8b]">Drafts and suggestions only — confirm before applying to the record. Machine learning forecasts and automation alerts are on the intelligence page.</p>
+          <Link to="/intelligence" className="mt-2 inline-block text-sm font-semibold text-[#e41e1f]">Open AI, machine learning, and automation</Link>
         </div>
         <button type="button" className={ui.btnSecondary} onClick={() => setOpen(false)}><X size={16} /></button>
       </div>

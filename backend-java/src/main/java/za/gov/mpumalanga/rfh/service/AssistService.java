@@ -232,6 +232,18 @@ public class AssistService {
 			case "radiology" -> "Radiology";
 			case "facilities" -> "Facilities";
 			case "allied" -> "Allied health";
+			case "reception" -> "Reception";
+			case "housekeeping" -> "Housekeeping";
+			case "porter" -> "Porters";
+			case "records" -> "Medical records";
+			case "midwife" -> "Maternity";
+			case "theatre" -> "Theatre";
+			case "infection" -> "Infection prevention";
+			case "social" -> "Social work";
+			case "security" -> "Security";
+			case "catering" -> "Catering";
+			case "quality" -> "Quality";
+			case "mortuary" -> "Mortuary";
 			case "pharmacy" -> "Pharmacy";
 			case "doctor" -> "Clinical";
 			default -> "Operations";

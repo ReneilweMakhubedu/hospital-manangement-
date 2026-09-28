@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
+import ChatBoard from './ChatBoard';
 import { asiphileniPillars, brand } from '../brand';
 import API_BASE, { API_ORIGIN } from '../api';
 
@@ -57,7 +58,7 @@ const fallbackSlides = [
     title: `Aligned with ${brand.programme}`,
     subtitle:
       'Infrastructure, HR, finance, patient experience, and monitoring in one hospital platform.',
-    ctaLabel: 'Staff login',
+    ctaLabel: 'Login',
     ctaLink: '/login',
     imageUrl: SHARP_HEROES[1],
   },
@@ -96,6 +97,7 @@ function Home() {
         if (!cancelled && response.ok && Array.isArray(data) && data.length > 0) {
           const mapped = data.map((slide, i) => ({
             ...slide,
+            ctaLabel: slide.ctaLabel === 'Staff login' ? 'Login' : slide.ctaLabel,
             imageUrl: slide.imageUrl || sharpHeroFor(i),
           }));
           setSlides(mapped);
@@ -176,7 +178,7 @@ function Home() {
           </div>
           <div className="flex gap-3">
             <Button primary onClick={() => navigate('/login')}>
-              Staff login
+              Login
             </Button>
             <Button onClick={() => navigate('/signup')}>Register</Button>
           </div>
@@ -334,6 +336,8 @@ function Home() {
           </div>
         </div>
       </section>
+
+      <ChatBoard />
 
       <footer className="border-t border-[#8b8b8b]/25 bg-[#ffffff] py-10">
         <div className="container mx-auto px-4 text-center">

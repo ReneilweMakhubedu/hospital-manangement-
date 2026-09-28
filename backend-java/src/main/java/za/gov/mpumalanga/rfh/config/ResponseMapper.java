@@ -319,6 +319,7 @@ public class ResponseMapper {
 		map.put("firstName", employee.getFirstName());
 		map.put("lastName", employee.getLastName());
 		map.put("email", employee.getEmail());
+		map.put("loginEmail", employee.getLoginEmail());
 		map.put("phone", employee.getPhone());
 		map.put("department", employee.getDepartment());
 		map.put("jobTitle", employee.getJobTitle());

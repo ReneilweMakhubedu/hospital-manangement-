@@ -38,9 +38,17 @@ Module mapping lives in `frontend/src/brand.js` and drives the admin command cen
 - Admin command centre by Asiphileni pillars; Super Admin home-hero CMS (`/cms`)
 - **AI Assist + automation** — staff alerts, scheduled scans, and draft helpers (see below)
 
-## AI Assist & automation
+## AI, machine learning, and automation
 
-Assist drafts are **suggestions only** — staff must confirm before applying to a record. The current engine is rule-based (`rfh-rules-v1`) with a stable API so a live LLM can be plugged in later.
+These are three separate capabilities. Open them together at `/intelligence` (any staff login; patients are excluded).
+
+| Technology | What it does | Boundary |
+|---|---|---|
+| **AI assist** | Drafts a handover, triage hint, priority, work order, or summary from text the staff member types (`rfh-rules-v1`) | Suggestion only. Nothing is saved until a person confirms it. Not a diagnosis or prescription. |
+| **Machine learning** | Logistic regression scores open lab orders for turnaround-breach risk. Linear regression forecasts occupied beds from occupancy, pending admissions, cleaning beds, and high-acuity patients (`rfh-gd-v1`) | Operational forecast. Weights are learned by gradient descent and shown on the page. |
+| **Automation** | Every 5 minutes: consented SMS reminders, SLA and queue scans, and alerts when a machine-learning signal crosses a threshold | Alerts go to the responsible role. Staff still allocate beds and release cleaned beds themselves. |
+
+Assist drafts are **suggestions only** — staff must confirm before applying to a record. The assist engine is rule-based (`rfh-rules-v1`) with a stable API so a live LLM can be plugged in later.
 
 | Capability | How to use it |
 |---|---|
@@ -58,6 +66,7 @@ Assist drafts are **suggestions only** — staff must confirm before applying to
 | `POST /api/automation/run` | Admin-only: run SMS flush + alert scan immediately |
 | `GET /api/automation/status` | Open / critical alert counts |
 | `POST /api/assist` | Body: `{ action, portal, text }` — actions: `draft-note`, `summarise`, `prioritise`, `triage`, `handover`, `work-order` |
+| `GET /api/learning/insights` | Machine-learning lab delay scores and bed-demand forecast |
 | `POST /api/doctor/consult/scribe-draft` | Doctor SOAP draft (same assistant engine) |
 
 ## Requirements
@@ -111,6 +120,19 @@ Use these seeded accounts on the login page (`/login`). They are standard system
 | Radiology | `radiology@rfh.gov.za` | `Radiology123!` | `/radiology` |
 | Facilities / Biomedical | `facilities@rfh.gov.za` | `Facilities123!` | `/facilities` |
 | Allied Health | `allied@rfh.gov.za` | `Allied123!` | `/allied` |
+| Reception | `reception@rfh.gov.za` | `Reception123!` | `/admissions` |
+| Housekeeping | `housekeeping@rfh.gov.za` | `Housekeeping123!` | `/housekeeping` |
+| Porter | `porter@rfh.gov.za` | `Porter123!` | `/porter` |
+| Medical records | `records@rfh.gov.za` | `Records123!` | `/charts` |
+| Midwife | `midwife@rfh.gov.za` | `Midwife123!` | `/maternity` |
+| Theatre nurse | `theatre@rfh.gov.za` | `Theatre123!` | `/theatre-desk` |
+| Anaesthetist | `anaesthetist@rfh.gov.za` | `Anaesthetist123!` | `/theatre-desk` |
+| Infection prevention | `infection@rfh.gov.za` | `Infection123!` | `/infection` |
+| Social worker | `social@rfh.gov.za` | `Social123!` | `/social` |
+| Security | `security@rfh.gov.za` | `Security123!` | `/security` |
+| Catering | `catering@rfh.gov.za` | `Catering123!` | `/catering` |
+| Quality officer | `quality@rfh.gov.za` | `Quality123!` | `/quality` |
+| Mortuary | `mortuary@rfh.gov.za` | `Mortuary123!` | `/mortuary` |
 | Doctor | `doctor@rfh.gov.za` | `Doctor123!` | `/doctor` |
 | Patient | `patient@rfh.gov.za` | `Patient123!` | `/patient/dashboard` |
 
@@ -134,6 +156,18 @@ Use these seeded accounts on the login page (`/login`). They are standard system
 | Radiology | `/radiology` | Imaging orders and reports, Assist |
 | Facilities | `/facilities` | Work orders, biomedical assets, PM, Assist |
 | Allied health | `/allied` | Physio, OT, dietetics, social work referrals, Assist |
+| Reception | `/admissions` | Bed requests and check-in. Nursing allocates the bed |
+| Housekeeping | `/housekeeping` | Cleaning tasks; release a CLEANING bed to available |
+| Porters | `/porter` | Transport jobs to a floor, ward, and bed |
+| Medical records | `/charts` | Chart pull and filing |
+| Maternity | `/maternity` | Midwife cases |
+| Theatre desk | `/theatre-desk` | Theatre nurse and anaesthetist cases, plus utilisation |
+| Infection prevention | `/infection` | Isolation cases by bed |
+| Social work | `/social` | Social work cases |
+| Security | `/security` | Incidents |
+| Catering | `/catering` | Ward meal orders |
+| Quality | `/quality` | Complaints SLA (5-day ack / 25-day resolve) |
+| Mortuary | `/mortuary` | Deceased register |
 | HR | `/hr` | Recruitment, vacancies, employees, leave, PMDS, training, reports, clinicians |
 | Finance | `/finance` | Billing, budget, accounting, irregular expenditure, cost centres |
 | Payroll | `/payroll` | Cost vs budget, timesheets, ghost-worker cases, certifications, audit |
@@ -145,10 +179,22 @@ Use these seeded accounts on the login page (`/login`). They are standard system
 
 | Path | Roles |
 |---|---|
-| `/reception` | admin, doctor |
-| `/complaints` | admin, doctor |
+| `/reception` | admin, doctor, reception |
+| `/admissions` | admin, reception |
+| `/housekeeping` | admin, housekeeping |
+| `/porter` | admin, porter |
+| `/charts` | admin, records |
+| `/maternity` | admin, midwife |
+| `/theatre-desk` | admin, theatre, anaesthetist |
+| `/infection` | admin, infection |
+| `/social` | admin, social |
+| `/security` | admin, security |
+| `/catering` | admin, catering |
+| `/quality` | admin, quality |
+| `/mortuary` | admin, mortuary |
+| `/complaints` | admin, doctor, quality |
 | `/sms` | admin, doctor |
-| `/theatres` | admin, doctor |
+| `/theatres` | admin, doctor, theatre, anaesthetist |
 | `/pharmacy` | admin, pharmacy |
 | `/pharmacy/dispense` | admin, pharmacy, doctor |
 | `/nursing` | admin, nurse, nurse_manager |

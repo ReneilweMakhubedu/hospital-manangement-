@@ -29,7 +29,7 @@ public class HrEmployeesController {
 	private static final Set<String> CATEGORIES = Set.of(
 			"PERMANENT", "CONTRACT", "INTERN", "COMMUNITY_SERVICE");
 	private static final Set<String> STATUSES = Set.of(
-			"ACTIVE", "ON_LEAVE", "RESIGNED", "RETIRED");
+			"ACTIVE", "ON_LEAVE", "RESIGNED", "RETIRED", "MERGED");
 
 	private final HrEmployeeRepository employeeRepository;
 	private final ResponseMapper responseMapper;
@@ -51,6 +51,7 @@ public class HrEmployeesController {
 	public List<Map<String, Object>> list() {
 		securityUtils.requireHr();
 		return employeeRepository.findAllByOrderByLastNameAscFirstNameAsc().stream()
+				.filter(employee -> !"MERGED".equalsIgnoreCase(employee.getStatus()))
 				.map(responseMapper::hrEmployee)
 				.toList();
 	}
@@ -143,7 +144,7 @@ public class HrEmployeesController {
 					? "ACTIVE"
 					: requireText(str(body.get("status")), "status").trim().toUpperCase(Locale.ROOT);
 			if (!STATUSES.contains(status)) {
-				throw new ApiException(400, "status must be ACTIVE, ON_LEAVE, RESIGNED, or RETIRED");
+				throw new ApiException(400, "status must be ACTIVE, ON_LEAVE, RESIGNED, RETIRED, or MERGED");
 			}
 			employee.setStatus(status);
 		}

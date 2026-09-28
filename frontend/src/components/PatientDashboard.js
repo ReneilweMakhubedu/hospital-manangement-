@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -13,6 +13,53 @@ import {
 
 import { apiFetch } from '../auth';
 import PatientLayout from './patient/PatientLayout';
+
+function FamilyWard() {
+  const navigate = useNavigate();
+  const [rows, setRows] = useState([]);
+  const [query, setQuery] = useState('');
+  const [note, setNote] = useState('');
+
+  const load = useCallback(async (q) => {
+    const res = await apiFetch(`/stay/locate?q=${encodeURIComponent(q)}`, { navigate });
+    const data = await res.json().catch(() => []);
+    if (!res.ok) {
+      setNote(data.error || 'Unable to look up a ward');
+      return;
+    }
+    const list = Array.isArray(data) ? data : [];
+    setRows(list);
+    setNote(q && list.length === 0 ? 'That name is not your own admission or a relative who listed you as next of kin.' : '');
+  }, [navigate]);
+
+  useEffect(() => { load(''); }, [load]);
+
+  return (
+    <section className="mb-8 rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] p-5 shadow-sm">
+      <h2 className="text-lg font-bold text-[#1f1f1f]">Ward location</h2>
+      <p className="mt-1 text-sm text-[#8b8b8b]">Your bed, and relatives who named you as next of kin.</p>
+      {rows.length === 0 ? <p className="mt-3 text-sm text-[#8b8b8b]">You are not currently in a ward bed.</p> : (
+        <ul className="mt-3 space-y-2">
+          {rows.map((row) => (
+            <li key={`${row.patientName}-${row.location}`} className="text-sm text-[#1f1f1f]">
+              <span className="font-semibold">{row.patientName}</span> · {row.location}
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="mt-4 flex max-w-xl gap-2" onSubmit={(event) => { event.preventDefault(); load(query.trim()); }}>
+        <input
+          className="w-full rounded-lg border border-[#8b8b8b]/40 bg-[#ffffff] px-3 py-2 text-sm text-[#1f1f1f] focus:outline-none focus:ring-2 focus:ring-[#e41e1f]"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Family member name"
+        />
+        <button type="submit" className="rounded-lg bg-[#e41e1f] px-4 py-2 text-sm font-semibold text-[#ffffff]">Find</button>
+      </form>
+      {note && <p className="mt-3 text-sm text-[#e41e1f]">{note}</p>}
+    </section>
+  );
+}
 
 function StatusBanner({ status }) {
   if (!status?.message) return null;
@@ -152,6 +199,8 @@ export default function PatientDashboard() {
               onClick={() => navigate('/patient/appointments')}
             />
           </section>
+
+          <FamilyWard />
 
           <section className="mb-8">
             <h2 className="mb-3 text-lg font-bold text-[#1f1f1f]">Quick actions</h2>

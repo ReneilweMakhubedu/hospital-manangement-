@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { brand } from '../brand';
 import API_BASE from '../api';
+import { opsRoleHome } from './ops/opsPortals';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -46,7 +47,9 @@ const Login = () => {
         );
       }
 
-      if (data.role === 'super_admin') {
+      if (opsRoleHome[data.role]) {
+        navigate(opsRoleHome[data.role]);
+      } else if (data.role === 'super_admin') {
         navigate('/cms');
       } else if (data.role === 'hr') {
         navigate('/hr');

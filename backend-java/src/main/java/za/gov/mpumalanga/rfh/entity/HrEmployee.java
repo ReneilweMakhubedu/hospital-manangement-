@@ -31,6 +31,8 @@ public class HrEmployee {
 	@Column(nullable = false)
 	private String email;
 
+	private String loginEmail;
+
 	private String phone;
 
 	@Column(nullable = false)
@@ -124,6 +126,14 @@ public class HrEmployee {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getLoginEmail() {
+		return loginEmail;
+	}
+
+	public void setLoginEmail(String loginEmail) {
+		this.loginEmail = loginEmail;
 	}
 
 	public String getPhone() {

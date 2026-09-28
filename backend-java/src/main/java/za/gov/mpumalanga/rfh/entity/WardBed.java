@@ -7,6 +7,7 @@ import java.time.Instant;
 @Entity
 @Table(name = "ward_beds")
 public class WardBed extends SupportEntity {
+	public String floor;
 	public String wardName;
 	public String bedNumber;
 	public String status;
@@ -14,4 +15,6 @@ public class WardBed extends SupportEntity {
 	public Long patientId;
 	public String acuity;
 	public Instant admittedAt;
+	public String createdByEmail;
+	public String allocatedByEmail;
 }

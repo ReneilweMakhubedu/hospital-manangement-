@@ -125,6 +125,9 @@ export default function Admin() {
             </div>
             <div className="flex flex-wrap gap-2">
               <StaffAlertsBell />
+              <button type="button" onClick={() => navigate('/intelligence')} className={ui.btnSecondary}>
+                Intelligence
+              </button>
               <button type="button" onClick={runAutomation} className={ui.btnPrimary}>
                 <Play size={16} /> Run automation
               </button>

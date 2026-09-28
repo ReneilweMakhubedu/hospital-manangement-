@@ -53,7 +53,7 @@ public class TheatresController {
 
 	@GetMapping
 	public List<Map<String, Object>> listTheatres() {
-		securityUtils.requireStaff();
+		securityUtils.requireTheatreBoard();
 		return theatreRepository.findAllByOrderByNameAsc().stream()
 				.map(responseMapper::theatre)
 				.toList();
@@ -75,7 +75,7 @@ public class TheatresController {
 	public List<Map<String, Object>> listSessions(
 			@RequestParam(required = false) String from,
 			@RequestParam(required = false) String to) {
-		securityUtils.requireStaff();
+		securityUtils.requireTheatreBoard();
 		LocalDate fromDate = from == null || from.isBlank() ? LocalDate.now().minusDays(7) : parseDate(from, "from");
 		LocalDate toDate = to == null || to.isBlank() ? LocalDate.now().plusDays(14) : parseDate(to, "to");
 		if (toDate.isBefore(fromDate)) {
@@ -90,7 +90,7 @@ public class TheatresController {
 
 	@PostMapping("/sessions")
 	public ResponseEntity<Map<String, Object>> bookSession(@RequestBody Map<String, Object> body) {
-		securityUtils.requireStaff();
+		securityUtils.requireTheatreBoard();
 		Long theatreId = asLong(body.get("theatreId"));
 		if (theatreId == null || theatreRepository.findById(theatreId).isEmpty()) {
 			throw new ApiException(400, "Select a valid theatre");
@@ -120,7 +120,7 @@ public class TheatresController {
 
 	@PutMapping("/sessions/{id}")
 	public Map<String, Object> updateSession(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-		securityUtils.requireStaff();
+		securityUtils.requireTheatreBoard();
 		TheatreSession session = theatreSessionRepository.findById(id)
 				.orElseThrow(() -> new ApiException(404, "Theatre session not found"));
 
@@ -161,7 +161,7 @@ public class TheatresController {
 	public List<Map<String, Object>> utilisation(
 			@RequestParam(required = false) String from,
 			@RequestParam(required = false) String to) {
-		securityUtils.requireStaff();
+		securityUtils.requireTheatreBoard();
 		LocalDate fromDate = from == null || from.isBlank() ? LocalDate.now().withDayOfMonth(1) : parseDate(from, "from");
 		LocalDate toDate = to == null || to.isBlank() ? LocalDate.now() : parseDate(to, "to");
 		if (toDate.isBefore(fromDate)) {

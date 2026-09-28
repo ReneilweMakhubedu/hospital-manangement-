@@ -41,6 +41,36 @@ export const asiphileniPillars = [
         status: 'live',
       },
       {
+        title: 'Housekeeping',
+        description: 'Cleaning tasks and releasing beds from cleaning to available.',
+        route: '/housekeeping',
+        status: 'live',
+      },
+      {
+        title: 'Porters',
+        description: 'Patient transport to a floor, ward, and bed.',
+        route: '/porter',
+        status: 'live',
+      },
+      {
+        title: 'Security',
+        description: 'Hospital access and incident records.',
+        route: '/security',
+        status: 'live',
+      },
+      {
+        title: 'Catering',
+        description: 'Ward diet and meal orders.',
+        route: '/catering',
+        status: 'live',
+      },
+      {
+        title: 'Mortuary',
+        description: 'Register of deceased patients received and released.',
+        route: '/mortuary',
+        status: 'live',
+      },
+      {
         title: 'Pharmacy command centre',
         description:
           'Operations queue, clinical quality, finance, inventory & supply, and dispense desk.',
@@ -212,6 +242,13 @@ export const asiphileniPillars = [
       { title: 'Laboratory portal', description: 'Specimen orders, processing, and diagnostic results.', route: '/lab', status: 'live' },
       { title: 'Radiology portal', description: 'Imaging orders, scheduling, studies, and reports.', route: '/radiology', status: 'live' },
       { title: 'Allied health portal', description: 'Multidisciplinary referrals and care progress.', route: '/allied', status: 'live' },
+      { title: 'Reception and admissions', description: 'Check-in and bed requests. Nursing allocates the bed.', route: '/admissions', status: 'live' },
+      { title: 'Maternity', description: 'Midwifery cases from antenatal care to discharge.', route: '/maternity', status: 'live' },
+      { title: 'Medical records filing', description: 'Chart requests for the ward where the patient is.', route: '/charts', status: 'live' },
+      { title: 'Social work', description: 'Discharge support and welfare cases.', route: '/social', status: 'live' },
+      { title: 'Infection prevention', description: 'Isolation and precaution cases by bed.', route: '/infection', status: 'live' },
+      { title: 'Theatre desk', description: 'Theatre nurse and anaesthetist case list.', route: '/theatre-desk', status: 'live' },
+      { title: 'Quality office', description: 'Complaint clocks: 5-day acknowledgement and 25-day resolution.', route: '/quality', status: 'live' },
       { title: 'Digital reception', description: 'Check-in and visit start.', route: '/reception', status: 'live' },
       { title: 'Patients', description: 'Electronic patient records.', route: '/patients', status: 'live' },
       { title: 'Appointments', description: 'Scheduling and bookings.', route: '/appointments', status: 'live' },
@@ -245,6 +282,7 @@ export const asiphileniPillars = [
       'Operational dashboards, KPIs, data quality, audit trails, and provincial reporting readiness.',
     modules: [
       { title: 'Operations dashboard', description: 'Day-to-day hospital overview.', route: '/dashboard', status: 'live' },
+      { title: 'AI, machine learning, automation', description: 'Assist drafts, trained operational forecasts, and scheduled alerts.', route: '/intelligence', status: 'live' },
       { title: 'Reports', description: 'Clinic and operational reports.', route: '/reports', status: 'live' },
       { title: 'Staff activity', description: 'Recent system actions for team coordination.', route: '/chat', status: 'live' },
       {

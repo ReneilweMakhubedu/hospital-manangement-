@@ -14,6 +14,7 @@ import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
 import za.gov.mpumalanga.rfh.service.AssistService;
 import za.gov.mpumalanga.rfh.service.AutomationService;
+import za.gov.mpumalanga.rfh.service.LearningService;
 
 @RestController
 @RequestMapping("/api")
@@ -21,11 +22,13 @@ public class AutomationController {
 
 	private final AutomationService automationService;
 	private final AssistService assistService;
+	private final LearningService learningService;
 	private final SecurityUtils security;
 
-	public AutomationController(AutomationService automationService, AssistService assistService, SecurityUtils security) {
+	public AutomationController(AutomationService automationService, AssistService assistService, LearningService learningService, SecurityUtils security) {
 		this.automationService = automationService;
 		this.assistService = assistService;
+		this.learningService = learningService;
 		this.security = security;
 	}
 
@@ -58,6 +61,12 @@ public class AutomationController {
 		map.put("engine", "rfh-automation-v1");
 		map.put("schedulerEnabled", true);
 		return map;
+	}
+
+	@GetMapping("/learning/insights")
+	public Map<String, Object> learning() {
+		security.requireHospitalStaff();
+		return learningService.insights();
 	}
 
 	@PostMapping("/assist")

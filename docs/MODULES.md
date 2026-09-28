@@ -7,7 +7,7 @@ Operational modules for **Rob Ferreira Hospital Management System**, organised b
 | **Infrastructure** | Facilities & biomedical, Pharmacy stock, Theatre utilisation | `/facilities`, `/pharmacy`, `/theatres` |
 | **HR Strengthening** | Staff, Vacancies, Staffing dashboard, PMDS & intern supervision | `/hr/*`, `/doctor`, `/hr/vacancies`, `/hr/staffing`, `/hr/pmds` |
 | **Financial Governance** | Finance, Payroll, Procurement | `/finance`, `/payroll`, `/procurement` |
-| **Patient Experience** | Nursing, Casualty/ED, Lab, Radiology, Allied health, Reception, Patients, Appointments, Queue, EMR, Surgical waitlist/TTG, Complaints SLA, SMS; **patient portal** | `/nursing`, `/casualty`, `/lab`, `/radiology`, `/allied`, staff clinical routes, `/patient/*` |
+| **Patient Experience** | Nursing, Casualty/ED, Lab, Radiology, Allied health, Reception/admissions, Maternity, Medical records filing, Social work, Infection prevention, Theatre desk, Quality, Housekeeping, Porters, Security, Catering, Mortuary, Patients, Appointments, Queue, EMR, Surgical waitlist/TTG, Complaints SLA, SMS; **patient portal** | `/nursing`, `/casualty`, `/lab`, `/radiology`, `/allied`, `/admissions`, `/maternity`, `/charts`, `/social`, `/infection`, `/theatre-desk`, `/quality`, `/housekeeping`, `/porter`, `/security`, `/catering`, `/mortuary`, staff clinical routes, `/patient/*` |
 | **Monitoring** | Operations dashboard, Reports, DHIS2 exports, Audit trail, M&E KPIs, **automation alerts & Assist** | `/dashboard`, `/reporting`, `/audit`, `/monitoring`, `/api/automation`, `/api/assist` |
 
 Source of truth for the admin command centre: `frontend/src/brand.js`.
