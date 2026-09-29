@@ -268,6 +268,13 @@ public class ResponseMapper {
 		map.put("dosage", prescription.getDosage());
 		map.put("frequency", prescription.getFrequency());
 		map.put("createdAt", prescription.getCreatedAt());
+		map.put("signedByEmail", prescription.getSignedByEmail());
+		map.put("signedAt", prescription.getSignedAt());
+		map.put("signReason", prescription.getSignReason());
+		map.put("verificationStatus", prescription.getVerificationStatus() == null ? "PENDING" : prescription.getVerificationStatus());
+		map.put("verifiedByEmail", prescription.getVerifiedByEmail());
+		map.put("verifiedAt", prescription.getVerifiedAt());
+		map.put("safetyFlags", prescription.getSafetyFlags());
 		return map;
 	}
 
@@ -444,6 +451,10 @@ public class ResponseMapper {
 		map.put("soapAssessment", note.getSoapAssessment());
 		map.put("soapPlan", note.getSoapPlan());
 		map.put("createdAt", note.getCreatedAt());
+		map.put("noteKind", note.getNoteKind() == null ? "CONSULT" : note.getNoteKind());
+		map.put("signedByEmail", note.getSignedByEmail());
+		map.put("signedAt", note.getSignedAt());
+		map.put("signReason", note.getSignReason());
 		return map;
 	}
 
@@ -463,6 +474,9 @@ public class ResponseMapper {
 		map.put("resultSummary", order.getResultSummary());
 		map.put("orderedAt", order.getOrderedAt());
 		map.put("updatedAt", order.getUpdatedAt());
+		map.put("signedByEmail", order.getSignedByEmail());
+		map.put("signedAt", order.getSignedAt());
+		map.put("signReason", order.getSignReason());
 		return map;
 	}
 
@@ -826,6 +840,7 @@ public class ResponseMapper {
 		map.put("resourceType", event.getResourceType());
 		map.put("resourceId", event.getResourceId());
 		map.put("detail", event.getDetail());
+		map.put("reason", event.getReason());
 		map.put("ipAddress", event.getIpAddress());
 		map.put("createdAt", event.getCreatedAt());
 		return map;

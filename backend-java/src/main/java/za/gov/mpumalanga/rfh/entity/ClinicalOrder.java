@@ -52,6 +52,13 @@ public class ClinicalOrder {
 	@Column(nullable = false)
 	private Instant updatedAt;
 
+	private String signedByEmail;
+
+	private Instant signedAt;
+
+	@Column(length = 2000)
+	private String signReason;
+
 	@PrePersist
 	void onCreate() {
 		Instant now = Instant.now();
@@ -177,4 +184,11 @@ public class ClinicalOrder {
 	public void setUpdatedAt(Instant updatedAt) {
 		this.updatedAt = updatedAt;
 	}
+
+	public String getSignedByEmail() { return signedByEmail; }
+	public void setSignedByEmail(String signedByEmail) { this.signedByEmail = signedByEmail; }
+	public Instant getSignedAt() { return signedAt; }
+	public void setSignedAt(Instant signedAt) { this.signedAt = signedAt; }
+	public String getSignReason() { return signReason; }
+	public void setSignReason(String signReason) { this.signReason = signReason; }
 }

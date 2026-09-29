@@ -47,6 +47,7 @@ import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
 import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.ClinicalSignOff;
 
 @RestController
 @RequestMapping("/api/patient")
@@ -209,6 +210,12 @@ public class PatientController {
 		if (body.containsKey("ccmddEnrolled")) patient.setCcmddEnrolled(asBoolean(body.get("ccmddEnrolled")));
 		if (body.containsKey("ccmddPickupPoint")) patient.setCcmddPickupPoint(str(body.get("ccmddPickupPoint")));
 		if (body.containsKey("nextCollectionDate")) patient.setNextCollectionDate(str(body.get("nextCollectionDate")));
+		boolean registering = patient.getOnboardingComplete() == null || patient.getOnboardingComplete() == 0;
+		Boolean smsBefore = patient.getSmsConsent();
+		Boolean popiaBefore = patient.getPopiaConsent();
+		Boolean whatsappBefore = patient.getWhatsappConsent();
+		Boolean marketingBefore = patient.getMarketingConsent();
+		Boolean sharingBefore = patient.getDataSharingConsent();
 		if (body.containsKey("whatsappConsent")) patient.setWhatsappConsent(asBoolean(body.get("whatsappConsent")));
 		if (body.containsKey("marketingConsent")) patient.setMarketingConsent(asBoolean(body.get("marketingConsent")));
 		if (body.containsKey("dataSharingConsent")) patient.setDataSharingConsent(asBoolean(body.get("dataSharingConsent")));
@@ -223,9 +230,24 @@ public class PatientController {
 			patient.setOnboardingComplete(asBoolean(body.get("onboardingComplete")) ? 1 : 0);
 		}
 
+		boolean consentChanged = changed(body, "smsConsent", smsBefore, patient.getSmsConsent())
+				|| changed(body, "popiaConsent", popiaBefore, patient.getPopiaConsent())
+				|| changed(body, "whatsappConsent", whatsappBefore, patient.getWhatsappConsent())
+				|| changed(body, "marketingConsent", marketingBefore, patient.getMarketingConsent())
+				|| changed(body, "dataSharingConsent", sharingBefore, patient.getDataSharingConsent());
+		String consentReason = null;
+		if (consentChanged) {
+			consentReason = registering
+					? "Patient gave consent during registration"
+					: ClinicalSignOff.require(body.get("consentReason"));
+		}
 		try {
 			patient = userRepository.save(patient);
-			auditService.log(auth, "UPDATE", "Patient", patient.getId(), "Patient profile updated");
+			if (consentChanged) {
+				auditService.logChange(auth, "UPDATE", "PatientConsent", patient.getId(), "Consent updated", consentReason);
+			} else {
+				auditService.log(auth, "UPDATE", "Patient", patient.getId(), "Patient profile updated");
+			}
 			return responseMapper.patient(patient);
 		} catch (DataIntegrityViolationException ex) {
 			throw new ApiException(400, "Email or ID number already exists");
@@ -274,44 +296,72 @@ public class PatientController {
 	@PostMapping("/book-appointment")
 	public ResponseEntity<Map<String, Object>> bookAppointment(@RequestBody Map<String, Object> body) {
 		AuthUser auth = securityUtils.requirePatient();
-		try {
-			String reason = str(body.get("reason"));
-			String purpose = str(body.get("purpose"));
-			String department = str(body.get("department"));
-			String urgency = triageUrgency(reason);
-
-			Appointment appointment = new Appointment();
-			appointment.setPatientId(auth.id());
-			appointment.setDoctorId(asLong(body.get("doctorId")));
-			appointment.setDate(str(body.get("date")));
-			appointment.setTime(str(body.get("time")));
-			appointment.setReason(reason == null ? "" : reason);
-			appointment.setPurpose(purpose);
-			appointment.setDepartment(department);
-			appointment.setUrgency(urgency);
-			appointment.setVisitPrep(str(body.get("visitPrep")));
-			appointment.setReferenceNumber(nextAppointmentReference());
-			appointment = appointmentRepository.save(appointment);
-
-			Map<String, Object> response = new LinkedHashMap<>();
-			response.put("message", "Appointment booked successfully");
-			response.put("urgency", urgency);
-			response.put("appointment", responseMapper.appointment(appointment));
-			return ResponseEntity.status(HttpStatus.CREATED).body(response);
-		} catch (ApiException ex) {
-			throw ex;
-		} catch (Exception ex) {
-			throw new ApiException(500, "Server error");
+		String reason = str(body.get("reason"));
+		String purpose = str(body.get("purpose"));
+		String department = str(body.get("department"));
+		String date = str(body.get("date"));
+		String time = str(body.get("time"));
+		if (purpose == null || purpose.isBlank() || department == null || department.isBlank()
+				|| reason == null || reason.isBlank() || date == null || date.isBlank()
+				|| time == null || time.isBlank()) {
+			throw new ApiException(400, "Purpose, department, reason, date, and time are required");
 		}
+		Long doctorId = asLong(body.get("doctorId"));
+		if (doctorId == null) {
+			doctorId = firstFreeDoctor(department, date.trim(), time.trim());
+			if (doctorId == null) {
+				throw new ApiException(400, "No doctor is free at that time. Choose another slot.");
+			}
+		} else if (doctorRepository.findById(doctorId).isEmpty()) {
+			throw new ApiException(400, "Select a doctor from the list");
+		} else if (appointmentRepository.existsByDoctorIdAndDateAndTime(doctorId, date.trim(), time.trim())) {
+			throw new ApiException(400, "That time is already booked. Choose another slot.");
+		}
+
+		String urgency = triageUrgency(reason);
+		Appointment appointment = new Appointment();
+		appointment.setPatientId(auth.id());
+		appointment.setDoctorId(doctorId);
+		appointment.setDate(date.trim());
+		appointment.setTime(time.trim());
+		appointment.setReason(reason.trim());
+		appointment.setPurpose(purpose.trim());
+		appointment.setDepartment(department.trim());
+		appointment.setUrgency(urgency);
+		appointment.setVisitPrep(str(body.get("visitPrep")));
+		appointment.setReferenceNumber(nextAppointmentReference());
+		try {
+			appointment = appointmentRepository.save(appointment);
+		} catch (DataIntegrityViolationException ex) {
+			throw new ApiException(400, "That time is already booked. Choose another slot.");
+		}
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("message", "Appointment booked successfully");
+		response.put("urgency", urgency);
+		response.put("appointment", responseMapper.appointment(appointment));
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@GetMapping("/available-slots")
-	public List<String> availableSlots(@RequestParam Long doctorId, @RequestParam String date) {
+	public List<String> availableSlots(
+			@RequestParam(required = false) Long doctorId,
+			@RequestParam String date) {
 		securityUtils.requirePatient();
-		List<String> booked = appointmentRepository.findByDoctorIdAndDate(doctorId, date).stream()
-				.map(Appointment::getTime)
+		if (doctorId != null) {
+			List<String> booked = appointmentRepository.findByDoctorIdAndDate(doctorId, date).stream()
+					.map(Appointment::getTime)
+					.toList();
+			return AppointmentSlots.FIXED_SLOTS.stream().filter(slot -> !booked.contains(slot)).toList();
+		}
+		List<Doctor> doctors = doctorRepository.findAll();
+		if (doctors.isEmpty()) {
+			return AppointmentSlots.FIXED_SLOTS;
+		}
+		return AppointmentSlots.FIXED_SLOTS.stream()
+				.filter(slot -> doctors.stream().anyMatch(doctor ->
+						!appointmentRepository.existsByDoctorIdAndDateAndTime(doctor.getId(), date, slot)))
 				.toList();
-		return AppointmentSlots.FIXED_SLOTS.stream().filter(slot -> !booked.contains(slot)).toList();
 	}
 
 	@GetMapping("/appointments")
@@ -545,6 +595,11 @@ public class PatientController {
 		return value.trim();
 	}
 
+	private static boolean changed(Map<String, Object> body, String key, Boolean before, Boolean after) {
+		if (!body.containsKey(key)) return false;
+		return Boolean.TRUE.equals(before) != Boolean.TRUE.equals(after);
+	}
+
 	private static boolean asBoolean(Object value) {
 		if (value instanceof Boolean b) {
 			return b;
@@ -559,11 +614,35 @@ public class PatientController {
 		return value == null ? null : String.valueOf(value);
 	}
 
+	private Long firstFreeDoctor(String department, String date, String time) {
+		List<Doctor> doctors = doctorRepository.findAll();
+		for (Doctor doctor : doctors) {
+			if (department != null && doctor.getDepartment() != null
+					&& department.equalsIgnoreCase(doctor.getDepartment())
+					&& !appointmentRepository.existsByDoctorIdAndDateAndTime(doctor.getId(), date, time)) {
+				return doctor.getId();
+			}
+		}
+		for (Doctor doctor : doctors) {
+			if (!appointmentRepository.existsByDoctorIdAndDateAndTime(doctor.getId(), date, time)) {
+				return doctor.getId();
+			}
+		}
+		return null;
+	}
+
 	private static Long asLong(Object value) {
 		if (value instanceof Number number) {
 			return number.longValue();
 		}
-		return value == null ? null : Long.parseLong(String.valueOf(value));
+		if (value == null) return null;
+		String text = String.valueOf(value).trim();
+		if (text.isEmpty() || "null".equalsIgnoreCase(text)) return null;
+		try {
+			return Long.parseLong(text);
+		} catch (NumberFormatException ex) {
+			return null;
+		}
 	}
 
 	private static boolean allPresent(String... values) {

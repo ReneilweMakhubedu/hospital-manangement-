@@ -32,6 +32,7 @@ export default function NursingBeds() {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState(null);
   const [status, setStatus] = useState('');
+  const [dischargeReason, setDischargeReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -93,6 +94,25 @@ export default function NursingBeds() {
       await load();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Unable to save bed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const requestDischarge = async (row) => {
+    setSaving(true);
+    try {
+      const res = await apiFetch(`/nursing/beds/${row.id}/emergency-discharge`, {
+        navigate,
+        method: 'POST',
+        body: JSON.stringify({ reason: dischargeReason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Unable to request discharge');
+      setDischargeReason('');
+      setStatus(data.message || 'Emergency discharge submitted for approval.');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Unable to request discharge');
     } finally {
       setSaving(false);
     }
@@ -216,6 +236,11 @@ export default function NursingBeds() {
         <p className="mb-6 text-sm text-[#8b8b8b]">A nurse manager adds beds. Open Update on a bed to place a patient. The system records your login as the nurse responsible for that allocation.</p>
       )}
 
+      <label className="mb-4 block max-w-xl text-sm font-semibold text-[#1f1f1f]">
+        Emergency discharge reason
+        <input className={`mt-1 ${inputClass}`} value={dischargeReason} onChange={(event) => setDischargeReason(event.target.value)} placeholder="Why this patient must leave before the usual discharge" />
+      </label>
+
       <section className={`${ui.card} overflow-hidden`}>
         {loading ? <p className="p-6 text-sm text-[#8b8b8b]">Loading…</p> : rows.length === 0 ? (
           <p className="p-6 text-sm text-[#8b8b8b]">No beds yet.</p>
@@ -239,6 +264,9 @@ export default function NursingBeds() {
                     <td className="px-4 py-3">{row.allocatedByEmail || '—'}</td>
                     <td className="px-4 py-3">
                       <button type="button" className="font-semibold text-[#e41e1f]" onClick={() => edit(row)}>Update</button>
+                      {row.status === 'OCCUPIED' && (
+                        <button type="button" className="ml-3 font-semibold text-[#1f1f1f]" onClick={() => requestDischarge(row)}>Emergency discharge</button>
+                      )}
                     </td>
                   </tr>
                 ))}

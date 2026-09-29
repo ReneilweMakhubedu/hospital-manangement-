@@ -15,6 +15,7 @@ import { brand } from '../brand';
 import { apiFetch, getRole, logout } from '../auth';
 import { portalChrome as ui } from '../theme';
 import { AssistPanel, StaffAlertsBell } from './AssistTools';
+import ReportFilters from './ReportFilters';
 
 const inputClass =
   'mt-1 w-full rounded-lg border border-[#8b8b8b]/40 bg-[#ffffff] px-3 py-2 text-[#1f1f1f] focus:outline-none focus:ring-2 focus:ring-[#e41e1f]';
@@ -109,6 +110,7 @@ export function DepartmentDashboard({ Layout, endpoint, title, subtitle, links }
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState({ department: '', ward: '', period: '7d' });
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -139,6 +141,7 @@ export function DepartmentDashboard({ Layout, endpoint, title, subtitle, links }
         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
       </button>
     }>
+      <ReportFilters {...filters} onChange={setFilters} />
       {error && <div className="mb-6 rounded-xl bg-[#f8f8f8] px-4 py-3 text-sm text-[#e41e1f]">{error}</div>}
       {loading && !data ? (
         <div className="flex items-center justify-center gap-2 py-20 text-[#8b8b8b]">

@@ -23,9 +23,11 @@ const emptySoap = {
   treatmentPlan: '',
   notes: '',
   visitDate: new Date().toISOString().slice(0, 10),
+  noteKind: 'CONSULT',
+  signReason: '',
 };
 
-const emptyRx = { medication: '', dosage: '', frequency: '' };
+const emptyRx = { medication: '', dosage: '', frequency: '', signReason: '', acknowledgeSafety: false };
 
 function patientLabel(p) {
   if (!p) return '—';
@@ -187,6 +189,8 @@ export default function DoctorConsult() {
           [soap.soapSubjective, soap.soapObjective, soap.soapAssessment, soap.soapPlan]
             .filter(Boolean)
             .join('\n\n'),
+        noteKind: soap.noteKind,
+        signReason: soap.signReason,
       };
       const res = await apiFetch('/doctor/consult/notes', {
         navigate,
@@ -220,6 +224,8 @@ export default function DoctorConsult() {
           medication: rx.medication,
           dosage: rx.dosage,
           frequency: rx.frequency,
+          signReason: rx.signReason,
+          acknowledgeSafety: rx.acknowledgeSafety,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -489,6 +495,18 @@ export default function DoctorConsult() {
                   />
                 </label>
 
+                <label className="block text-sm font-semibold text-[#1f1f1f]">
+                  Note type
+                  <select name="noteKind" value={soap.noteKind} onChange={onSoapChange} className={fieldClass}>
+                    <option value="CONSULT">Consult</option>
+                    <option value="TREATMENT">Treatment change</option>
+                    <option value="DISCHARGE">Discharge</option>
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold text-[#1f1f1f]">
+                  Electronic sign-off reason
+                  <input name="signReason" value={soap.signReason} onChange={onSoapChange} className={fieldClass} placeholder="Why this note is complete" />
+                </label>
                 <button
                   type="submit"
                   disabled={savingNote}
@@ -555,6 +573,21 @@ export default function DoctorConsult() {
                   />
                 </label>
               ))}
+              <label className="block text-sm font-semibold text-[#1f1f1f]">
+                Electronic sign-off reason
+                <input
+                  name="signReason"
+                  value={rx.signReason}
+                  onChange={(e) => setRx((r) => ({ ...r, signReason: e.target.value }))}
+                  required
+                  className={fieldClass}
+                  placeholder="Why this medicine is being prescribed"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-[#1f1f1f]">
+                <input type="checkbox" checked={rx.acknowledgeSafety} onChange={(e) => setRx((r) => ({ ...r, acknowledgeSafety: e.target.checked }))} />
+                I have reviewed the allergy, duplicate, and dose warning
+              </label>
               <button
                 type="submit"
                 disabled={savingRx}

@@ -36,6 +36,7 @@ import za.gov.mpumalanga.rfh.repository.PurchaseRequisitionRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
 import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.GovernanceService;
 
 @RestController
 @RequestMapping("/api/finance")
@@ -54,6 +55,7 @@ public class FinanceController {
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
 	private final AuditService auditService;
+	private final GovernanceService governanceService;
 
 	public FinanceController(
 			CostCentreRepository costCentreRepository,
@@ -64,7 +66,8 @@ public class FinanceController {
 			PurchaseRequisitionRepository purchaseRequisitionRepository,
 			ResponseMapper responseMapper,
 			SecurityUtils securityUtils,
-			AuditService auditService) {
+			AuditService auditService,
+			GovernanceService governanceService) {
 		this.costCentreRepository = costCentreRepository;
 		this.financeTransactionRepository = financeTransactionRepository;
 		this.patientInvoiceRepository = patientInvoiceRepository;
@@ -74,6 +77,7 @@ public class FinanceController {
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
 		this.auditService = auditService;
+		this.governanceService = governanceService;
 	}
 
 	@GetMapping("/dashboard")
@@ -277,6 +281,20 @@ public class FinanceController {
 			throw new ApiException(400, "amount is required");
 		}
 		String type = normalizeType(str(body.get("type")));
+		boolean adjustment = amount.signum() < 0 || "true".equalsIgnoreCase(String.valueOf(body.get("adjustment")));
+		if (adjustment) {
+			String reason = body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
+			Map<String, Object> payload = new LinkedHashMap<>();
+			payload.put("costCentreId", costCentreId);
+			payload.put("txnDate", txnDate.toString());
+			payload.put("description", description.trim());
+			payload.put("amount", amount);
+			payload.put("type", type);
+			payload.put("reference", blankToNull(str(body.get("reference"))));
+			payload.put("createdBy", "finance#" + auth.id());
+			return ResponseEntity.status(HttpStatus.ACCEPTED).body(governanceService.request(
+					auth, GovernanceService.BILLING, "Billing adjustment " + amount, reason, payload));
+		}
 
 		FinanceTransaction txn = new FinanceTransaction();
 		txn.setCostCentreId(costCentreId);

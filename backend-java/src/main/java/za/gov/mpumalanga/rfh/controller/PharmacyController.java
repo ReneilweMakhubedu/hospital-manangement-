@@ -26,6 +26,10 @@ import za.gov.mpumalanga.rfh.repository.PrescriptionRepository;
 import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
+import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.ClinicalSignOff;
+import za.gov.mpumalanga.rfh.service.GovernanceService;
+import za.gov.mpumalanga.rfh.service.MedicationSafetyService;
 
 @RestController
 @RequestMapping("/api/pharmacy")
@@ -38,6 +42,9 @@ public class PharmacyController {
 	private final DoctorRepository doctorRepository;
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
+	private final MedicationSafetyService medicationSafetyService;
+	private final AuditService auditService;
+	private final GovernanceService governanceService;
 
 	public PharmacyController(
 			MedicineRepository medicineRepository,
@@ -46,7 +53,10 @@ public class PharmacyController {
 			UserRepository userRepository,
 			DoctorRepository doctorRepository,
 			ResponseMapper responseMapper,
-			SecurityUtils securityUtils) {
+			SecurityUtils securityUtils,
+			MedicationSafetyService medicationSafetyService,
+			AuditService auditService,
+			GovernanceService governanceService) {
 		this.medicineRepository = medicineRepository;
 		this.prescriptionRepository = prescriptionRepository;
 		this.dispensationRepository = dispensationRepository;
@@ -54,17 +64,20 @@ public class PharmacyController {
 		this.doctorRepository = doctorRepository;
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
+		this.medicationSafetyService = medicationSafetyService;
+		this.auditService = auditService;
+		this.governanceService = governanceService;
 	}
 
 	@GetMapping("/medicines")
 	public List<Map<String, Object>> medicines() {
-		requireStaff();
+		requireRead();
 		return medicineRepository.findAllByOrderByNameAsc().stream().map(responseMapper::medicine).toList();
 	}
 
 	@PostMapping("/medicines")
 	public ResponseEntity<Map<String, Object>> addMedicine(@RequestBody Map<String, Object> body) {
-		requireStaff();
+		securityUtils.requireRoles("pharmacy", "admin", "super_admin");
 		String name = str(body.get("name"));
 		String strength = str(body.get("strength"));
 		String form = str(body.get("form"));
@@ -92,20 +105,33 @@ public class PharmacyController {
 
 	@PatchMapping("/medicines/{id}/stock")
 	public Map<String, Object> updateStock(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-		requireStaff();
+		AuthUser auth = securityUtils.requireRoles("pharmacy", "admin", "super_admin");
 		Integer quantity = asInt(body.get("quantity"));
 		if (quantity == null || quantity < 0) {
 			throw new ApiException(400, "Stock quantity must be a whole number of zero or more");
 		}
 		Medicine medicine = medicineRepository.findById(id)
 				.orElseThrow(() -> new ApiException(404, "Medicine not found"));
+		int current = medicine.getQuantity() == null ? 0 : medicine.getQuantity();
+		if (quantity < current) {
+			if (!"pharmacy".equalsIgnoreCase(auth.role())) {
+				throw new ApiException(403, "Only a pharmacist can request a stock write-off");
+			}
+			String reason = body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
+			return governanceService.request(auth, GovernanceService.STOCK,
+					"Write off " + medicine.getName() + " from " + current + " to " + quantity,
+					reason,
+					Map.of("medicineId", id, "quantity", quantity));
+		}
 		medicine.setQuantity(quantity);
-		return responseMapper.medicine(medicineRepository.save(medicine));
+		Medicine saved = medicineRepository.save(medicine);
+		auditService.logChange(auth, "UPDATE", "Medicine", saved.getId(), "Stock received", "Quantity set to " + quantity);
+		return responseMapper.medicine(saved);
 	}
 
 	@GetMapping("/prescriptions")
 	public List<Map<String, Object>> prescriptions() {
-		requireStaff();
+		requireRead();
 		return prescriptionRepository.findAllByOrderByCreatedAtDesc().stream().map(p -> {
 			Map<String, Object> map = new LinkedHashMap<>();
 			map.put("_id", p.getId());
@@ -113,6 +139,9 @@ public class PharmacyController {
 			map.put("dosage", p.getDosage());
 			map.put("frequency", p.getFrequency());
 			map.put("createdAt", p.getCreatedAt());
+			map.put("verificationStatus", p.getVerificationStatus() == null ? "PENDING" : p.getVerificationStatus());
+			map.put("safetyFlags", p.getSafetyFlags());
+			map.put("signReason", p.getSignReason());
 			userRepository.findById(p.getPatientId()).ifPresent(u ->
 					map.put("patientName", u.getFirstName() + " " + u.getLastName()));
 			doctorRepository.findById(p.getDoctorId()).ifPresent(d ->
@@ -123,10 +152,37 @@ public class PharmacyController {
 		}).toList();
 	}
 
+	@PostMapping("/prescriptions/{id}/verify")
+	public Map<String, Object> verify(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+		AuthUser auth = securityUtils.requireRoles("pharmacy");
+		Prescription prescription = prescriptionRepository.findById(id)
+				.orElseThrow(() -> new ApiException(404, "Prescription not found"));
+		String decision = body.get("decision") == null ? "" : String.valueOf(body.get("decision")).trim().toUpperCase();
+		if (!"VERIFIED".equals(decision) && !"REJECTED".equals(decision)) {
+			throw new ApiException(400, "decision must be VERIFIED or REJECTED");
+		}
+		String reason = ClinicalSignOff.require(body.get("reason"));
+		MedicationSafetyService.Review review = medicationSafetyService.review(
+				prescription.getPatientId(), prescription.getMedication(), prescription.getDosage(), prescription.getId());
+		if ("VERIFIED".equals(decision)) {
+			medicationSafetyService.enforce(review, ClinicalSignOff.acknowledged(body.get("acknowledgeSafety")));
+		}
+		prescription.setVerificationStatus(decision);
+		prescription.setVerifiedByEmail(auditService.actorEmail(auth));
+		prescription.setVerifiedAt(java.time.Instant.now());
+		prescription.setVerificationNote(reason);
+		prescription.setSafetyFlags(review.summary());
+		prescriptionRepository.save(prescription);
+		auditService.logChange(auth, decision, "Prescription", prescription.getId(), prescription.getMedication(), reason);
+		Map<String, Object> response = responseMapper.prescription(prescription);
+		response.put("safety", review.toMap());
+		return response;
+	}
+
 	@PostMapping("/dispensations")
 	@Transactional
 	public ResponseEntity<Map<String, Object>> dispense(@RequestBody Map<String, Object> body) {
-		AuthUser auth = requireStaff();
+		AuthUser auth = securityUtils.requireRoles("pharmacy");
 		Long prescriptionId = asLong(body.get("prescriptionId"));
 		Long medicineId = asLong(body.get("medicineId"));
 		Integer quantity = asInt(body.get("quantity"));
@@ -141,6 +197,12 @@ public class PharmacyController {
 		if (medicine.getQuantity() < quantity) {
 			throw new ApiException(400, "Only " + medicine.getQuantity() + " unit(s) are available");
 		}
+		if (!"VERIFIED".equalsIgnoreCase(prescription.getVerificationStatus())) {
+			throw new ApiException(409, "A pharmacist must verify this prescription before it can be dispensed");
+		}
+		MedicationSafetyService.Review review = medicationSafetyService.review(
+				prescription.getPatientId(), prescription.getMedication(), prescription.getDosage(), prescription.getId());
+		medicationSafetyService.enforce(review, ClinicalSignOff.acknowledged(body.get("acknowledgeSafety")));
 		medicine.setQuantity(medicine.getQuantity() - quantity);
 		medicineRepository.save(medicine);
 		Dispensation dispensation = new Dispensation();
@@ -149,6 +211,7 @@ public class PharmacyController {
 		dispensation.setQuantity(quantity);
 		dispensation.setDispensedBy(auth.id());
 		dispensation = dispensationRepository.save(dispensation);
+		auditService.logChange(auth, "DISPENSE", "Prescription", prescription.getId(), prescription.getMedication(), "Dispensed " + quantity);
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("message", "Medication dispensed successfully");
 		response.put("id", dispensation.getId());
@@ -157,7 +220,7 @@ public class PharmacyController {
 
 	@GetMapping("/dispensations")
 	public List<Map<String, Object>> dispensations() {
-		requireStaff();
+		requireRead();
 		return dispensationRepository.findTop20ByOrderByDispensedAtDesc().stream().map(x -> {
 			Map<String, Object> map = new LinkedHashMap<>();
 			map.put("_id", x.getId());
@@ -176,15 +239,8 @@ public class PharmacyController {
 		}).toList();
 	}
 
-	private AuthUser requireStaff() {
-		AuthUser user = securityUtils.requireUser();
-		if (!"admin".equalsIgnoreCase(user.role())
-				&& !"super_admin".equalsIgnoreCase(user.role())
-				&& !"pharmacy".equalsIgnoreCase(user.role())
-				&& !"doctor".equalsIgnoreCase(user.role())) {
-			throw new ApiException(403, "Only pharmacy, doctor, or hospital admin can access the pharmacy");
-		}
-		return user;
+	private AuthUser requireRead() {
+		return securityUtils.requireRoles("pharmacy", "doctor", "admin", "super_admin");
 	}
 
 	private static String str(Object value) {

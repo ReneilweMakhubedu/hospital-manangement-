@@ -32,6 +32,8 @@ export default function PharmacyDispense() {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [writeOffReason, setWriteOffReason] = useState('');
+  const [safetyAck, setSafetyAck] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -103,11 +105,11 @@ export default function PharmacyDispense() {
       const res = await apiFetch(`/pharmacy/medicines/${id}/stock`, {
         navigate,
         method: 'PATCH',
-        body: JSON.stringify({ quantity: Number(stockValues[id]) }),
+        body: JSON.stringify({ quantity: Number(stockValues[id]), reason: writeOffReason }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Unable to update stock');
-      setStatus({ type: 'success', message: `${medicine.name} stock updated.` });
+      setStatus({ type: 'success', message: data.pendingApproval ? data.message : `${medicine.name} stock updated.` });
       await loadData();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -136,12 +138,34 @@ export default function PharmacyDispense() {
           prescriptionId: Number(dispenseForm.prescriptionId),
           medicineId: Number(dispenseForm.medicineId),
           quantity: qty,
+          acknowledgeSafety: safetyAck,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Unable to dispense medication');
       setDispenseForm({ prescriptionId: '', medicineId: '', quantity: '1' });
       setStatus({ type: 'success', message: 'Medication dispensed and inventory updated.' });
+      await loadData();
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verify = async (item, decision) => {
+    const reason = window.prompt(decision === 'VERIFIED' ? 'Pharmacist verification note' : 'Reason for rejection');
+    if (!reason) return;
+    setSaving(true);
+    try {
+      const res = await apiFetch(`/pharmacy/prescriptions/${item._id || item.id}/verify`, {
+        navigate,
+        method: 'POST',
+        body: JSON.stringify({ decision, reason, acknowledgeSafety: safetyAck }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Unable to verify prescription');
+      setStatus({ type: 'success', message: `${item.medication} marked ${decision}.` });
       await loadData();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -307,7 +331,7 @@ export default function PharmacyDispense() {
                 <option value="">Select a prescription</option>
                 {prescriptions.map((item) => (
                   <option key={item._id || item.id} value={item._id || item.id}>
-                    {item.patientName} — {item.medication} ({item.dosage})
+                    {item.patientName} — {item.medication} ({item.dosage}) [{item.verificationStatus || 'PENDING'}]
                   </option>
                 ))}
               </select>
@@ -349,6 +373,12 @@ export default function PharmacyDispense() {
                 {selectedMedicine.quantity}).
               </p>
             )}
+            {role === 'pharmacy' && (
+              <label className="flex items-center gap-2 text-sm text-[#1f1f1f]">
+                <input type="checkbox" checked={safetyAck} onChange={(event) => setSafetyAck(event.target.checked)} />
+                I have reviewed the allergy, duplicate, and dose warning
+              </label>
+            )}
             <button
               disabled={
                 saving ||
@@ -367,6 +397,23 @@ export default function PharmacyDispense() {
       <section className="mt-8 overflow-hidden rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] shadow-sm">
         <div className="border-b border-[#8b8b8b]/30 p-6">
           <h2 className="text-xl font-bold text-[#1f1f1f]">Inventory</h2>
+          {role === 'pharmacy' && (
+            <label className="mt-3 block max-w-md text-sm font-semibold text-[#1f1f1f]">
+              Write-off reason
+              <input className="mt-1 w-full rounded border border-[#8b8b8b]/40 px-3 py-2" value={writeOffReason} onChange={(event) => setWriteOffReason(event.target.value)} placeholder="Required when stock is reduced" />
+            </label>
+          )}
+          {role === 'pharmacy' && prescriptions.some((item) => (item.verificationStatus || 'PENDING') === 'PENDING') && (
+            <ul className="mt-4 space-y-2">
+              {prescriptions.filter((item) => (item.verificationStatus || 'PENDING') === 'PENDING').map((item) => (
+                <li key={item._id || item.id} className="flex flex-wrap items-center gap-2 text-sm text-[#1f1f1f]">
+                  <span>{item.patientName} — {item.medication} {item.safetyFlags ? `(${item.safetyFlags})` : ''}</span>
+                  <button type="button" className="font-semibold text-[#e41e1f]" onClick={() => verify(item, 'VERIFIED')}>Verify</button>
+                  <button type="button" className="font-semibold text-[#1f1f1f]" onClick={() => verify(item, 'REJECTED')}>Reject</button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {loading ? (
           <div className="flex items-center gap-2 p-6 text-[#8b8b8b]">

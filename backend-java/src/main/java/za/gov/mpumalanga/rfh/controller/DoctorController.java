@@ -42,6 +42,9 @@ import za.gov.mpumalanga.rfh.repository.ReferralLetterRepository;
 import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
+import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.ClinicalSignOff;
+import za.gov.mpumalanga.rfh.service.MedicationSafetyService;
 
 @RestController
 @RequestMapping("/api/doctor")
@@ -61,6 +64,8 @@ public class DoctorController {
 	private final ReferralLetterRepository referralLetterRepository;
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
+	private final MedicationSafetyService medicationSafetyService;
+	private final AuditService auditService;
 
 	public DoctorController(
 			DoctorRepository doctorRepository,
@@ -72,7 +77,9 @@ public class DoctorController {
 			ClinicalOrderRepository clinicalOrderRepository,
 			ReferralLetterRepository referralLetterRepository,
 			ResponseMapper responseMapper,
-			SecurityUtils securityUtils) {
+			SecurityUtils securityUtils,
+			MedicationSafetyService medicationSafetyService,
+			AuditService auditService) {
 		this.doctorRepository = doctorRepository;
 		this.userRepository = userRepository;
 		this.appointmentRepository = appointmentRepository;
@@ -83,6 +90,8 @@ public class DoctorController {
 		this.referralLetterRepository = referralLetterRepository;
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
+		this.medicationSafetyService = medicationSafetyService;
+		this.auditService = auditService;
 	}
 
 	@GetMapping("/profile")
@@ -374,21 +383,30 @@ public class DoctorController {
 	@PostMapping("/prescribe-medication")
 	public ResponseEntity<Map<String, Object>> prescribe(@RequestBody Map<String, Object> body) {
 		AuthUser auth = securityUtils.requireDoctor();
-		try {
-			Prescription prescription = new Prescription();
-			prescription.setPatientId(asLong(body.get("patientId")));
-			prescription.setDoctorId(auth.id());
-			prescription.setMedication(str(body.get("medication")));
-			prescription.setDosage(str(body.get("dosage")));
-			prescription.setFrequency(str(body.get("frequency")));
-			prescription = prescriptionRepository.save(prescription);
-			Map<String, Object> response = new LinkedHashMap<>();
-			response.put("message", "Medication prescribed successfully");
-			response.put("prescription", responseMapper.prescription(prescription));
-			return ResponseEntity.status(HttpStatus.CREATED).body(response);
-		} catch (Exception ex) {
-			throw new ApiException(400, "Unable to save prescription");
-		}
+		String reason = ClinicalSignOff.require(body.get("signReason"));
+		Long patientId = asLong(body.get("patientId"));
+		String medication = str(body.get("medication"));
+		String dosage = str(body.get("dosage"));
+		MedicationSafetyService.Review review = medicationSafetyService.review(patientId, medication, dosage, null);
+		medicationSafetyService.enforce(review, ClinicalSignOff.acknowledged(body.get("acknowledgeSafety")));
+		Prescription prescription = new Prescription();
+		prescription.setPatientId(patientId);
+		prescription.setDoctorId(auth.id());
+		prescription.setMedication(medication);
+		prescription.setDosage(dosage);
+		prescription.setFrequency(str(body.get("frequency")));
+		prescription.setSignedByEmail(doctorRepository.findById(auth.id()).map(Doctor::getEmail).orElse(null));
+		prescription.setSignedAt(Instant.now());
+		prescription.setSignReason(reason);
+		prescription.setVerificationStatus("PENDING");
+		prescription.setSafetyFlags(review.summary());
+		prescription = prescriptionRepository.save(prescription);
+		auditService.logChange(auth, "SIGN", "Prescription", prescription.getId(), medication, reason);
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("message", "Medication prescribed and signed. A pharmacist must verify it before it is dispensed.");
+		response.put("safety", review.toMap());
+		response.put("prescription", responseMapper.prescription(prescription));
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@GetMapping("/prescriptions")
@@ -412,9 +430,21 @@ public class DoctorController {
 		AuthUser auth = securityUtils.requireDoctor();
 		Prescription prescription = prescriptionRepository.findByIdAndDoctorId(id, auth.id())
 				.orElseThrow(() -> new ApiException(404, "Prescription not found"));
-		prescription.setMedication(str(body.get("medication")));
-		prescription.setDosage(str(body.get("dosage")));
+		String reason = ClinicalSignOff.require(body.get("signReason"));
+		String medication = str(body.get("medication"));
+		String dosage = str(body.get("dosage"));
+		MedicationSafetyService.Review review = medicationSafetyService.review(prescription.getPatientId(), medication, dosage, prescription.getId());
+		medicationSafetyService.enforce(review, ClinicalSignOff.acknowledged(body.get("acknowledgeSafety")));
+		prescription.setMedication(medication);
+		prescription.setDosage(dosage);
 		prescription.setFrequency(str(body.get("frequency")));
+		prescription.setSignReason(reason);
+		prescription.setSignedAt(Instant.now());
+		prescription.setVerificationStatus("PENDING");
+		prescription.setVerifiedByEmail(null);
+		prescription.setVerifiedAt(null);
+		prescription.setSafetyFlags(review.summary());
+		auditService.logChange(auth, "SIGN", "Prescription", prescription.getId(), "Treatment change", reason);
 		return responseMapper.prescription(prescriptionRepository.save(prescription));
 	}
 

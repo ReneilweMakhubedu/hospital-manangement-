@@ -12,6 +12,7 @@ const emptyForm = {
   priority: 'ROUTINE',
   clinicalIndication: '',
   providerHint: 'NHLS',
+  signReason: '',
 };
 
 const PROVIDERS = ['NHLS', 'Ampath', 'PathCare', 'Other'];
@@ -203,6 +204,10 @@ export default function DoctorOrders() {
               required
               className={fieldClass}
             />
+          </label>
+          <label className="block text-sm font-semibold text-[#1f1f1f] sm:col-span-2">
+            Electronic sign-off reason
+            <input name="signReason" value={form.signReason} onChange={onChange} required className={fieldClass} placeholder="Why this order is being placed" />
           </label>
           <button
             type="submit"

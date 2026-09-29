@@ -23,6 +23,8 @@ import za.gov.mpumalanga.rfh.repository.ClinicalOrderRepository;
 import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
+import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.ClinicalSignOff;
 
 @RestController
 @RequestMapping("/api/doctor/orders")
@@ -36,16 +38,19 @@ public class DoctorOrdersController {
 	private final UserRepository userRepository;
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
+	private final AuditService auditService;
 
 	public DoctorOrdersController(
 			ClinicalOrderRepository clinicalOrderRepository,
 			UserRepository userRepository,
 			ResponseMapper responseMapper,
-			SecurityUtils securityUtils) {
+			SecurityUtils securityUtils,
+			AuditService auditService) {
 		this.clinicalOrderRepository = clinicalOrderRepository;
 		this.userRepository = userRepository;
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
+		this.auditService = auditService;
 	}
 
 	@GetMapping
@@ -96,7 +101,12 @@ public class DoctorOrdersController {
 		if (order.getReferenceNumber() == null) {
 			order.setReferenceNumber(nextReference(orderType));
 		}
+		String reason = ClinicalSignOff.require(body.get("signReason"));
+		order.setSignReason(reason);
+		order.setSignedAt(Instant.now());
+		order.setSignedByEmail(auditService.actorEmail(auth));
 		order = clinicalOrderRepository.save(order);
+		auditService.logChange(auth, "SIGN", "ClinicalOrder", order.getId(), testName.trim(), reason);
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("message", "Clinical order created");

@@ -110,6 +110,8 @@ import SuperAdminCms from "./components/SuperAdminCms";
 import { getRole, getToken } from "./auth";
 import Intelligence from "./components/Intelligence";
 import WardBoard from "./components/WardBoard";
+import OperationsInsight from "./components/OperationsInsight";
+import Approvals from "./components/Approvals";
 import { opsPortals, opsRoleHome } from "./components/ops/opsPortals";
 import { HousekeepingBeds, OpsDashboard, OpsUsers, OpsWork } from "./components/ops/OpsPages";
 
@@ -200,6 +202,8 @@ function App() {
         <Route path="/" element={<Home />} />
 
         <Route path="/intelligence" element={<StaffRoute><Intelligence /></StaffRoute>} />
+        <Route path="/operations" element={<StaffRoute><OperationsInsight /></StaffRoute>} />
+        <Route path="/approvals" element={<StaffRoute><Approvals /></StaffRoute>} />
         <Route path="/ward-board" element={<StaffRoute><WardBoard /></StaffRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
