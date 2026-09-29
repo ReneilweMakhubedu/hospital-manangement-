@@ -34,6 +34,9 @@ public class AuditEvent {
 	@Column(length = 4000)
 	private String detail;
 
+	@Column(length = 2000)
+	private String reason;
+
 	private String ipAddress;
 
 	@Column(nullable = false)
@@ -109,6 +112,9 @@ public class AuditEvent {
 	public void setDetail(String detail) {
 		this.detail = detail;
 	}
+
+	public String getReason() { return reason; }
+	public void setReason(String reason) { this.reason = reason; }
 
 	public String getIpAddress() {
 		return ipAddress;

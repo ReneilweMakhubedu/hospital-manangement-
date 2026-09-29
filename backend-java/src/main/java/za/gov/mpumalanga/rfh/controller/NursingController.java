@@ -29,12 +29,18 @@ public class NursingController {
 	private final SecurityUtils security;
 	private final AdminRepository adminRepository;
 	private final za.gov.mpumalanga.rfh.service.StayFlowService stayFlow;
+	private final za.gov.mpumalanga.rfh.service.MedicationSafetyService medicationSafety;
+	private final za.gov.mpumalanga.rfh.service.GovernanceService governanceService;
+	private final za.gov.mpumalanga.rfh.service.AuditService auditService;
 
-	public NursingController(SupportStore store, SecurityUtils security, AdminRepository adminRepository, za.gov.mpumalanga.rfh.service.StayFlowService stayFlow) {
+	public NursingController(SupportStore store, SecurityUtils security, AdminRepository adminRepository, za.gov.mpumalanga.rfh.service.StayFlowService stayFlow, za.gov.mpumalanga.rfh.service.MedicationSafetyService medicationSafety, za.gov.mpumalanga.rfh.service.GovernanceService governanceService, za.gov.mpumalanga.rfh.service.AuditService auditService) {
 		this.store = store;
 		this.security = security;
 		this.adminRepository = adminRepository;
 		this.stayFlow = stayFlow;
+		this.medicationSafety = medicationSafety;
+		this.governanceService = governanceService;
+		this.auditService = auditService;
 	}
 
 	@GetMapping("/dashboard")
@@ -186,8 +192,26 @@ public class NursingController {
 		item.patientName = SupportApi.required(body, "patientName");
 		item.medication = SupportApi.required(body, "medication");
 		item.status = SupportApi.optionalChoice(body, "status", MED_STATUSES, "GIVEN");
+		if ("GIVEN".equals(item.status)) {
+			za.gov.mpumalanga.rfh.service.MedicationSafetyService.Review review = medicationSafety.reviewByName(item.patientName, item.medication, item.dose);
+			medicationSafety.enforce(review, za.gov.mpumalanga.rfh.service.ClinicalSignOff.acknowledged(body.get("acknowledgeSafety")));
+		}
 		if (item.givenAt == null && "GIVEN".equals(item.status)) item.givenAt = Instant.now();
-		return created(store.save(item));
+		NursingMedAdmin saved = store.save(item);
+		auditService.logChange(security.requireUser(), "CREATE", "NursingMedAdmin", saved.id, item.medication, item.status);
+		return created(saved);
+	}
+
+	@PostMapping("/beds/{id}/emergency-discharge")
+	public Map<String, Object> emergencyDischarge(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+		AuthUser auth = security.requireRoles("nurse", "nurse_manager", "doctor");
+		WardBed bed = store.find(WardBed.class, id).orElseThrow(() -> new ApiException(404, "Bed not found"));
+		if (!"OCCUPIED".equalsIgnoreCase(bed.status)) throw new ApiException(409, "Only an occupied bed can be discharged this way");
+		String reason = body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
+		return governanceService.request(auth, za.gov.mpumalanga.rfh.service.GovernanceService.DISCHARGE,
+				"Emergency discharge " + bed.patientName + " from " + bed.wardName + " bed " + bed.bedNumber,
+				reason,
+				Map.of("bedId", id, "actorEmail", auditService.actorEmail(auth) == null ? "" : auditService.actorEmail(auth)));
 	}
 
 	private void applyOccupancy(WardBed bed, String oldPatient, Long oldPatientId, boolean patientChanged) {

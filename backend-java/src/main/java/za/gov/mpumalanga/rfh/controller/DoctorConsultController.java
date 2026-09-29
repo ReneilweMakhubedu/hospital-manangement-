@@ -26,6 +26,8 @@ import za.gov.mpumalanga.rfh.repository.UserRepository;
 import za.gov.mpumalanga.rfh.security.AuthUser;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
 import za.gov.mpumalanga.rfh.service.AssistService;
+import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.ClinicalSignOff;
 
 @RestController
 @RequestMapping("/api/doctor/consult")
@@ -39,6 +41,7 @@ public class DoctorConsultController {
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
 	private final AssistService assistService;
+	private final AuditService auditService;
 
 	public DoctorConsultController(
 			UserRepository userRepository,
@@ -48,7 +51,8 @@ public class DoctorConsultController {
 			AppointmentRepository appointmentRepository,
 			ResponseMapper responseMapper,
 			SecurityUtils securityUtils,
-			AssistService assistService) {
+			AssistService assistService,
+			AuditService auditService) {
 		this.userRepository = userRepository;
 		this.clinicalNoteRepository = clinicalNoteRepository;
 		this.prescriptionRepository = prescriptionRepository;
@@ -57,6 +61,7 @@ public class DoctorConsultController {
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
 		this.assistService = assistService;
+		this.auditService = auditService;
 	}
 
 	@GetMapping("/patient/{patientId}")
@@ -135,6 +140,15 @@ public class DoctorConsultController {
 			notes = soapObjective;
 		}
 
+		String kind = str(body.get("noteKind"));
+		if (kind == null || kind.isBlank()) kind = "CONSULT";
+		kind = kind.trim().toUpperCase(Locale.ROOT);
+		if (!List.of("CONSULT", "DISCHARGE", "TREATMENT").contains(kind)) {
+			throw new ApiException(400, "noteKind must be CONSULT, DISCHARGE, or TREATMENT");
+		}
+		boolean needsSign = !"CONSULT".equals(kind) || treatmentPlan != null || soapPlan != null;
+		String reason = needsSign ? ClinicalSignOff.require(body.get("signReason")) : null;
+
 		ClinicalNote note = new ClinicalNote();
 		note.setPatientId(patientId);
 		note.setDoctorId(auth.id());
@@ -148,7 +162,16 @@ public class DoctorConsultController {
 		note.setDiagnosis(diagnosis);
 		note.setTreatmentPlan(treatmentPlan);
 		note.setNotes(notes);
+		note.setNoteKind(kind);
+		if (reason != null) {
+			note.setSignReason(reason);
+			note.setSignedAt(java.time.Instant.now());
+			note.setSignedByEmail(auditService.actorEmail(auth));
+		}
 		note = clinicalNoteRepository.save(note);
+		if (reason != null) {
+			auditService.logChange(auth, "SIGN", "ClinicalNote", note.getId(), kind, reason);
+		}
 		return ResponseEntity.status(HttpStatus.CREATED).body(responseMapper.clinicalNote(note));
 	}
 

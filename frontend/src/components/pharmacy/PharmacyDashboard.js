@@ -13,6 +13,7 @@ import {
 import { brand } from '../../brand';
 import { apiFetch } from '../../auth';
 import PharmacyLayout from './PharmacyLayout';
+import ReportFilters from '../ReportFilters';
 
 function formatMoney(value) {
   const n = Number(value);
@@ -95,6 +96,7 @@ export default function PharmacyDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const [filters, setFilters] = useState({ department: 'Pharmacy', ward: '', period: '7d' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -140,6 +142,7 @@ export default function PharmacyDashboard() {
         </button>
       }
     >
+      <ReportFilters {...filters} onChange={setFilters} />
       <StatusBanner status={status} />
 
       {loading && !data ? (

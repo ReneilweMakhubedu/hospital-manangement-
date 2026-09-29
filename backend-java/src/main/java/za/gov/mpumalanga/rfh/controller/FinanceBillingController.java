@@ -27,6 +27,7 @@ import za.gov.mpumalanga.rfh.repository.DebtAccountRepository;
 import za.gov.mpumalanga.rfh.repository.PatientInvoiceRepository;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
 import za.gov.mpumalanga.rfh.service.AuditService;
+import za.gov.mpumalanga.rfh.service.GovernanceService;
 
 @RestController
 @RequestMapping("/api/finance/billing")
@@ -46,18 +47,21 @@ public class FinanceBillingController {
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
 	private final AuditService auditService;
+	private final GovernanceService governanceService;
 
 	public FinanceBillingController(
 			PatientInvoiceRepository patientInvoiceRepository,
 			DebtAccountRepository debtAccountRepository,
 			ResponseMapper responseMapper,
 			SecurityUtils securityUtils,
-			AuditService auditService) {
+			AuditService auditService,
+			GovernanceService governanceService) {
 		this.patientInvoiceRepository = patientInvoiceRepository;
 		this.debtAccountRepository = debtAccountRepository;
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
 		this.auditService = auditService;
+		this.governanceService = governanceService;
 	}
 
 	@GetMapping("/invoices")
@@ -83,6 +87,19 @@ public class FinanceBillingController {
 		var auth = securityUtils.requireFinance();
 		PatientInvoice invoice = patientInvoiceRepository.findById(id)
 				.orElseThrow(() -> new ApiException(404, "Invoice not found"));
+		boolean amountChanged = body.containsKey("amount")
+				&& asBigDecimal(body.get("amount"), invoice.getAmount()).compareTo(invoice.getAmount() == null ? BigDecimal.ZERO : invoice.getAmount()) != 0;
+		boolean paidChanged = body.containsKey("amountPaid")
+				&& asBigDecimal(body.get("amountPaid"), invoice.getAmountPaid()).compareTo(invoice.getAmountPaid() == null ? BigDecimal.ZERO : invoice.getAmountPaid()) != 0;
+		if (amountChanged || paidChanged) {
+			String reason = body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
+			Map<String, Object> payload = new LinkedHashMap<>();
+			payload.put("invoiceId", id);
+			if (body.containsKey("amount")) payload.put("amount", body.get("amount"));
+			if (body.containsKey("amountPaid")) payload.put("amountPaid", body.get("amountPaid"));
+			return governanceService.request(auth, GovernanceService.BILLING,
+					"Invoice adjustment " + invoice.getReferenceNumber(), reason, payload);
+		}
 		applyInvoice(invoice, body, false);
 		invoice = patientInvoiceRepository.save(invoice);
 		auditService.log(auth, "UPDATE", "PatientInvoice", invoice.getId(), invoice.getStatus());

@@ -128,6 +128,12 @@ export default function Admin() {
               <button type="button" onClick={() => navigate('/intelligence')} className={ui.btnSecondary}>
                 Intelligence
               </button>
+              <button type="button" onClick={() => navigate('/operations')} className={ui.btnSecondary}>
+                Operations
+              </button>
+              <button type="button" onClick={() => navigate('/approvals')} className={ui.btnSecondary}>
+                Approvals
+              </button>
               <button type="button" onClick={runAutomation} className={ui.btnPrimary}>
                 <Play size={16} /> Run automation
               </button>

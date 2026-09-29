@@ -27,7 +27,10 @@ import za.gov.mpumalanga.rfh.entity.PharmacyQueueTicket;
 import za.gov.mpumalanga.rfh.entity.SmsReminder;
 import za.gov.mpumalanga.rfh.entity.StaffAlert;
 import za.gov.mpumalanga.rfh.entity.User;
+import za.gov.mpumalanga.rfh.entity.Vacancy;
 import za.gov.mpumalanga.rfh.repository.AppointmentRepository;
+import za.gov.mpumalanga.rfh.repository.LeaveRequestRepository;
+import za.gov.mpumalanga.rfh.repository.VacancyRepository;
 import za.gov.mpumalanga.rfh.repository.ComplaintRepository;
 import za.gov.mpumalanga.rfh.repository.MedicineRepository;
 import za.gov.mpumalanga.rfh.repository.PharmacyQueueTicketRepository;
@@ -46,6 +49,8 @@ public class AutomationService {
 	private final AppointmentRepository appointmentRepository;
 	private final UserRepository userRepository;
 	private final LearningService learningService;
+	private final VacancyRepository vacancyRepository;
+	private final LeaveRequestRepository leaveRequestRepository;
 
 	public AutomationService(
 			SupportStore supportStore,
@@ -55,7 +60,9 @@ public class AutomationService {
 			SmsReminderRepository smsReminderRepository,
 			AppointmentRepository appointmentRepository,
 			UserRepository userRepository,
-			LearningService learningService) {
+			LearningService learningService,
+			VacancyRepository vacancyRepository,
+			LeaveRequestRepository leaveRequestRepository) {
 		this.supportStore = supportStore;
 		this.complaintRepository = complaintRepository;
 		this.medicineRepository = medicineRepository;
@@ -64,6 +71,8 @@ public class AutomationService {
 		this.appointmentRepository = appointmentRepository;
 		this.userRepository = userRepository;
 		this.learningService = learningService;
+		this.vacancyRepository = vacancyRepository;
+		this.leaveRequestRepository = leaveRequestRepository;
 	}
 
 	@Transactional
@@ -91,7 +100,8 @@ public class AutomationService {
 			if (patient == null
 					|| patient.getPhoneNumber() == null
 					|| patient.getPhoneNumber().isBlank()
-					|| !Boolean.TRUE.equals(patient.getSmsConsent())) {
+					|| !Boolean.TRUE.equals(patient.getSmsConsent())
+					|| !Boolean.TRUE.equals(patient.getPopiaConsent())) {
 				skipped++;
 				continue;
 			}
@@ -122,6 +132,12 @@ public class AutomationService {
 				continue;
 			}
 			if (!Boolean.TRUE.equals(reminder.getConsentRecorded())) {
+				continue;
+			}
+			User recipient = reminder.getPatientId() == null ? null : userRepository.findById(reminder.getPatientId()).orElse(null);
+			if (recipient == null || !Boolean.TRUE.equals(recipient.getSmsConsent()) || !Boolean.TRUE.equals(recipient.getPopiaConsent())) {
+				reminder.setStatus("OPTED_OUT");
+				smsReminderRepository.save(reminder);
 				continue;
 			}
 			if (reminder.getScheduledFor() != null && reminder.getScheduledFor().isAfter(now)) {
@@ -316,6 +332,39 @@ public class AutomationService {
 					porterJobs + " transport job(s) are waiting.",
 					"porter-jobs", "porter-requested");
 		}
+		long openPosts = 0;
+		try {
+			openPosts = vacancyRepository.findAll().stream()
+					.filter(vacancy -> vacancy.getFilledAt() == null && !"FILLED".equalsIgnoreCase(vacancy.getStatus()) && !"CLOSED".equalsIgnoreCase(vacancy.getStatus()))
+					.count();
+		} catch (Exception ignored) {
+			openPosts = 0;
+		}
+		if (openPosts > 0) {
+			created += upsert("hr", "HIGH", "Staffing shortage",
+					openPosts + " post(s) are still open.",
+					"staffing", "open-vacancies");
+		}
+		long pendingLeave = leaveRequestRepository.countByStatusIgnoreCase("PENDING");
+		if (pendingLeave >= 3) {
+			created += upsert("hr", "MEDIUM", "Leave pressure on the roster",
+					pendingLeave + " leave requests are still pending.",
+					"staffing", "pending-leave");
+			created += upsert("nurse_manager", "MEDIUM", "Leave pressure on the roster",
+					pendingLeave + " leave requests are still pending.",
+					"staffing", "pending-leave-nurse");
+		}
+		long approachingStock = medicineRepository.findAll().stream()
+				.filter(medicine -> medicine.getQuantity() != null && medicine.getReorderLevel() != null && medicine.getReorderLevel() > 0
+						&& medicine.getQuantity() > medicine.getReorderLevel()
+						&& medicine.getQuantity() <= Math.ceil(medicine.getReorderLevel() * 1.2))
+				.count();
+		if (approachingStock > 0) {
+			created += upsert("pharmacy", "MEDIUM", "Stock depletion risk",
+					approachingStock + " medicine line(s) are within 20% of the reorder level.",
+					"pharmacy-stock", "stock-depletion");
+		}
+
 		for (Map<String, Object> signal : learningService.automationSignals()) {
 			created += upsert(String.valueOf(signal.get("audience")), String.valueOf(signal.get("severity")),
 					String.valueOf(signal.get("title")), String.valueOf(signal.get("detail")),
@@ -365,13 +414,25 @@ public class AutomationService {
 		alert.audienceRole = audience;
 		alert.severity = severity;
 		alert.title = title;
-		alert.detail = detail;
+		alert.detail = maskClinicalDetail(audience, detail);
 		alert.source = source;
 		alert.fingerprint = fingerprint;
 		alert.acknowledged = false;
 		alert.createdAt = Instant.now();
 		supportStore.save(alert);
 		return 1;
+	}
+
+	private static String maskClinicalDetail(String audience, String detail) {
+		String role = audience == null ? "" : audience.toLowerCase(Locale.ROOT);
+		boolean limited = role.equals("security") || role.equals("catering") || role.equals("housekeeping")
+				|| role.equals("porter") || role.equals("mortuary");
+		if (!limited || detail == null) return detail;
+		String lower = detail.toLowerCase(Locale.ROOT);
+		if (lower.contains("result") || lower.contains("diagnosis") || lower.contains("allergy") || lower.contains(" mg")) {
+			return "Clinical detail is limited to the treating team.";
+		}
+		return detail;
 	}
 
 	private static Map<String, Object> mapAlert(StaffAlert alert) {

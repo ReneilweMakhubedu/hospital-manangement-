@@ -22,6 +22,18 @@ const PURPOSES = [
   'Other',
 ];
 
+const FALLBACK_DEPARTMENTS = [
+  'Outpatient',
+  'Cardiology',
+  'Antenatal',
+  'Diabetic',
+  'HIV/ART',
+  'Oncology',
+  'Physiotherapy',
+  'Dental',
+  'Emergency',
+];
+
 const FALLBACK_SLOTS = [
   '10:00 AM',
   '11:00 AM',
@@ -49,7 +61,7 @@ function isUpcoming(apt) {
 export default function PatientAppointments() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [departments, setDepartments] = useState(FALLBACK_DEPARTMENTS);
   const [doctors, setDoctors] = useState([]);
   const [slots, setSlots] = useState(FALLBACK_SLOTS);
   const [loading, setLoading] = useState(true);
@@ -82,11 +94,12 @@ export default function PatientAppointments() {
       }
       if (depRes.ok) {
         const data = await depRes.json();
-        setDepartments(
-          Array.isArray(data)
-            ? data.map((d) => (typeof d === 'string' ? d : d.name || d.department)).filter(Boolean)
-            : []
-        );
+        const names = Array.isArray(data)
+          ? data.map((d) => (typeof d === 'string' ? d : d.name || d.department)).filter(Boolean)
+          : [];
+        setDepartments(names.length ? names : FALLBACK_DEPARTMENTS);
+      } else {
+        setDepartments(FALLBACK_DEPARTMENTS);
       }
       if (docRes.ok) {
         const data = await docRes.json();
@@ -167,7 +180,6 @@ export default function PatientAppointments() {
         message: data.message || 'Appointment booked successfully.',
       });
       setForm({ purpose: '', department: '', reason: '', date: '', doctorId: '', time: '' });
-      setShowBook(false);
       await load();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -358,7 +370,7 @@ export default function PatientAppointments() {
       {status.message && (
         <div
           className={`mb-6 rounded-xl px-4 py-3 text-sm ${
-            status.type === 'error' ? 'bg-[#f8f8f8] text-[#e41e1f]' : 'bg-[#f8f8f8] text-[#e41e1f]'
+            status.type === 'error' ? 'bg-[#f8f8f8] text-[#e41e1f]' : 'bg-[#f8f8f8] text-[#1f1f1f]'
           }`}
         >
           {status.message}
@@ -389,6 +401,11 @@ export default function PatientAppointments() {
       {showBook && (
         <section className="mb-8 rounded-2xl border border-[#8b8b8b]/30 bg-[#ffffff] p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-bold text-[#1f1f1f]">Book a visit</h2>
+          {status.message && (
+            <p className={`mb-4 rounded-lg px-3 py-2 text-sm ${status.type === 'error' ? 'bg-[#f8f8f8] text-[#e41e1f]' : 'bg-[#f8f8f8] text-[#1f1f1f]'}`}>
+              {status.message}
+            </p>
+          )}
           <form onSubmit={submitBook} className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-semibold text-[#1f1f1f]">
               Purpose

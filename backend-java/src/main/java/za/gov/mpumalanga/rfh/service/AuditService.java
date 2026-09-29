@@ -31,6 +31,16 @@ public class AuditService {
 		log(actor, action, resourceType, resourceId, detail, null);
 	}
 
+	public void logChange(AuthUser actor, String action, String resourceType, Object resourceId, String detail, String reason) {
+		AuditEvent event = base(actor, action, resourceType, resourceId, detail);
+		event.setReason(reason);
+		auditEventRepository.save(event);
+	}
+
+	public String actorEmail(AuthUser actor) {
+		return resolveEmail(actor);
+	}
+
 	public void log(
 			AuthUser actor,
 			String action,
@@ -52,6 +62,20 @@ public class AuditService {
 		auditEventRepository.save(event);
 	}
 
+	private AuditEvent base(AuthUser actor, String action, String resourceType, Object resourceId, String detail) {
+		AuditEvent event = new AuditEvent();
+		if (actor != null) {
+			event.setActorId(actor.id());
+			event.setActorRole(actor.role());
+			event.setActorEmail(resolveEmail(actor));
+		}
+		event.setAction(action);
+		event.setResourceType(resourceType);
+		event.setResourceId(resourceId == null ? null : String.valueOf(resourceId));
+		event.setDetail(detail);
+		return event;
+	}
+
 	public void logSystem(String action, String resourceType, Object resourceId, String detail) {
 		AuditEvent event = new AuditEvent();
 		event.setActorRole("system");
@@ -69,10 +93,9 @@ public class AuditService {
 		}
 		String role = actor.role().toLowerCase();
 		return switch (role) {
-			case "admin" -> adminRepository.findById(actor.id()).map(a -> a.getEmail()).orElse(null);
 			case "doctor" -> doctorRepository.findById(actor.id()).map(d -> d.getEmail()).orElse(null);
 			case "patient" -> userRepository.findById(actor.id()).map(u -> u.getEmail()).orElse(null);
-			default -> null;
+			default -> adminRepository.findById(actor.id()).map(a -> a.getEmail()).orElse(null);
 		};
 	}
 }

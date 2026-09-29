@@ -20,6 +20,7 @@ import za.gov.mpumalanga.rfh.entity.PayrollPeriod;
 import za.gov.mpumalanga.rfh.exception.ApiException;
 import za.gov.mpumalanga.rfh.repository.PayrollPeriodRepository;
 import za.gov.mpumalanga.rfh.security.SecurityUtils;
+import za.gov.mpumalanga.rfh.service.GovernanceService;
 import za.gov.mpumalanga.rfh.service.PayrollAuditService;
 
 @RestController
@@ -32,16 +33,19 @@ public class PayrollPeriodsController {
 	private final ResponseMapper responseMapper;
 	private final SecurityUtils securityUtils;
 	private final PayrollAuditService payrollAuditService;
+	private final GovernanceService governanceService;
 
 	public PayrollPeriodsController(
 			PayrollPeriodRepository periodRepository,
 			ResponseMapper responseMapper,
 			SecurityUtils securityUtils,
-			PayrollAuditService payrollAuditService) {
+			PayrollAuditService payrollAuditService,
+			GovernanceService governanceService) {
 		this.periodRepository = periodRepository;
 		this.responseMapper = responseMapper;
 		this.securityUtils = securityUtils;
 		this.payrollAuditService = payrollAuditService;
+		this.governanceService = governanceService;
 	}
 
 	@GetMapping
@@ -67,6 +71,16 @@ public class PayrollPeriodsController {
 		var auth = securityUtils.requirePayroll();
 		PayrollPeriod period = periodRepository.findById(id)
 				.orElseThrow(() -> new ApiException(404, "Payroll period not found"));
+		String nextStatus = body.containsKey("status") ? String.valueOf(body.get("status")).trim().toUpperCase(Locale.ROOT) : period.getStatus();
+		boolean closing = ("CLOSED".equals(nextStatus) || "PAID".equals(nextStatus))
+				&& !nextStatus.equalsIgnoreCase(period.getStatus());
+		if (closing) {
+			String reason = body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
+			return governanceService.request(auth, GovernanceService.PAYROLL,
+					"Payroll period " + period.getPeriodLabel() + " to " + nextStatus,
+					reason,
+					Map.of("periodId", id, "status", nextStatus));
+		}
 		applyFields(period, body, false);
 		period = periodRepository.save(period);
 		payrollAuditService.log(auth, "UPDATE", "PayrollPeriod", period.getId(), period.getStatus());

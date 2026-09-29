@@ -55,6 +55,15 @@ public class ClinicalNote {
 	@Column(nullable = false)
 	private Instant createdAt;
 
+	private String noteKind;
+
+	private String signedByEmail;
+
+	private Instant signedAt;
+
+	@Column(length = 2000)
+	private String signReason;
+
 	@PrePersist
 	void onCreate() {
 		if (createdAt == null) {
@@ -173,4 +182,13 @@ public class ClinicalNote {
 	public void setCreatedAt(Instant createdAt) {
 		this.createdAt = createdAt;
 	}
+
+	public String getNoteKind() { return noteKind; }
+	public void setNoteKind(String noteKind) { this.noteKind = noteKind; }
+	public String getSignedByEmail() { return signedByEmail; }
+	public void setSignedByEmail(String signedByEmail) { this.signedByEmail = signedByEmail; }
+	public Instant getSignedAt() { return signedAt; }
+	public void setSignedAt(Instant signedAt) { this.signedAt = signedAt; }
+	public String getSignReason() { return signReason; }
+	public void setSignReason(String signReason) { this.signReason = signReason; }
 }

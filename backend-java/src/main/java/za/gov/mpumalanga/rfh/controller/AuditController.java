@@ -37,7 +37,20 @@ public class AuditController {
 			@RequestParam(required = false) String resourceType,
 			@RequestParam(required = false) String from,
 			@RequestParam(required = false) String to) {
-		securityUtils.requireAdmin();
+		var actor = securityUtils.requireUser();
+		boolean admin = "admin".equalsIgnoreCase(actor.role()) || "super_admin".equalsIgnoreCase(actor.role());
+		boolean quality = "quality".equalsIgnoreCase(actor.role());
+		if (!admin && !quality) {
+			throw new ApiException(403, "Not authorized");
+		}
+		if (quality && (resourceType == null || resourceType.isBlank())) {
+			resourceType = "Complaint";
+		}
+		if (quality && resourceType != null
+				&& !"complaint".equalsIgnoreCase(resourceType)
+				&& !"approvalrequest".equalsIgnoreCase(resourceType)) {
+			throw new ApiException(403, "Quality can review complaint and approval audit records");
+		}
 		Instant fromInstant = parseDayStart(from, "from");
 		Instant toInstant = parseDayEnd(to, "to");
 
